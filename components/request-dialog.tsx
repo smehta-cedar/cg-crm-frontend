@@ -28,7 +28,7 @@ import { US_STATES } from "@/lib/us-states";
 
 type RequestDialogProps = {
   open: boolean;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
   /**
    * When set (an agent filing for themselves), the Agent select is hidden and

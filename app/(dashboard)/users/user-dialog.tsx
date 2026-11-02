@@ -49,7 +49,7 @@ type UserDialogProps = {
   canAssignRoles: boolean;
   /** Saves the values; resolves with the error to show instead of closing. */
   onSave: (values: UserValues) => Promise<UserError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

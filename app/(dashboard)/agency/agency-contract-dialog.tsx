@@ -72,7 +72,7 @@ type AgencyContractDialogProps = {
   onSave: (values: AgencyContractValues) => Promise<AgencyContractError[]>;
   /** Adds an active policy type; resolves with it, or with the message to show. */
   onAddPolicyType: (name: string) => Promise<{ ok: true; policyType: PolicyTypeOption } | { ok: false; message: string }>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

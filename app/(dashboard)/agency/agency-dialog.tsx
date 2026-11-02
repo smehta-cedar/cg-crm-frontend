@@ -60,7 +60,7 @@ type AgencyDialogProps = {
   editing: AgencyRecord | "new" | null;
   /** Saves the values; resolves with the error to show instead of closing. */
   onSave: (values: AgencyValues) => Promise<AgencyError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

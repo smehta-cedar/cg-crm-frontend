@@ -59,7 +59,7 @@ type ProductDialogProps = {
   editor: ProductEditor | null;
   /** Saves the values; resolves with the errors to show instead of closing. */
   onSave: (values: ProductValues) => Promise<ProductError[]>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

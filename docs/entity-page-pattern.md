@@ -248,14 +248,13 @@ applies to the lists that pass `renderDetails`.
 - One native `<dialog>` for both modes, state
   `type Editor = { mode: "add" } | { mode: "edit"; record }`.
 - Open by setting the editor; an effect calls `showModal()` after render. The
-  form renders only while the editor is set, so closing (Cancel, Escape,
-  backdrop click, save) clears the editor in `onClose` and unmounts/resets the form.
-- Backdrop click closes (`event.target === event.currentTarget`; the form fills the dialog).
+  form renders only while the editor is set, so closing (Cancel or save)
+  clears the editor in `onClose` and unmounts/resets the form.
+- Only Cancel or save closes it: backdrop clicks do nothing and Escape is
+  swallowed (`ModalDialog` prevents both `cancel` and the Escape keydown).
 - Classes: `m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-lg bg-surface p-0 shadow-xl backdrop:bg-scrim`
   (`m-auto` is needed because Tailwind preflight zeroes dialog margins).
-- The dialog stays `p-0`; the `<form>` owns the inset (`p-6`). Padding on the
-  dialog itself would create a ring inside it where clicks hit the backdrop
-  handler and close the form.
+- The dialog stays `p-0`; the `<form>` owns the inset (`p-6`).
 - Content: `h2` title (`Add <entity>` / `Edit <name>`), one-line description
   saying it is not saved anywhere, fields grid `mt-5 grid gap-4 sm:grid-cols-2`
   (wide fields `sm:col-span-2`), footer `mt-6 flex justify-end gap-2` with
@@ -361,7 +360,7 @@ To change how the app looks in either mode, edit the token block in
    table, expandable row for list/secondary data + notes, add/edit dialog,
    diff → note, unsaved banner.
 6. `npm run typecheck` and `next build`, then click through add, edit (no-op
-   and real change), duplicate check, expand/collapse, Escape/backdrop close.
+   and real change), duplicate check, expand/collapse, Escape/backdrop leave the dialog open.
    The typecheck has `noUnusedLocals` and `noUnusedParameters` on, so an unused
    import, local or parameter fails it; there is no ESLint (typescript-eslint
    can't run on the TypeScript 7 toolchain this project uses).

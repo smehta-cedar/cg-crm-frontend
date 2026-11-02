@@ -62,7 +62,7 @@ type RoleDialogProps = {
   onSave: (values: RoleValues) => Promise<RoleError | null>;
   /** Deletes the role being edited; resolves with the error to show instead of closing. */
   onDelete: (role: RoleRecord) => Promise<RoleError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, a save or a delete. */
+  /** Runs for every close: Cancel, a save or a delete. */
   onClose: () => void;
 };
 

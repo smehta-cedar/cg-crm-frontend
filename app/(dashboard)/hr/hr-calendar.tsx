@@ -390,8 +390,10 @@ function DetailDrawer({
       ref={dialogRef}
       aria-labelledby={titleId}
       onClose={onClose}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) event.currentTarget.close();
+      // Only the Close button closes it (see ModalDialog).
+      onCancel={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") event.preventDefault();
       }}
       className="hr-drawer"
     >

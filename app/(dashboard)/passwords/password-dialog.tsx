@@ -62,7 +62,7 @@ type AddPasswordDialogProps = {
   /** Offer "+ Add site" / "Edit site" under the Site select. Off on the agent profile. */
   manageSites?: boolean;
   onSaved: () => void;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

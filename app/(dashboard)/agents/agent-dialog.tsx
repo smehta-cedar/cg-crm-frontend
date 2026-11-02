@@ -98,7 +98,7 @@ type AgentDialogProps = {
   editor: AgentEditor | null;
   /** Saves the values; resolves with the error to show instead of closing. */
   onSave: (values: AgentValues) => Promise<AgentError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

@@ -6,7 +6,7 @@ import { ModalDialog, useModalDialog } from "@/components/modal-dialog";
 
 /*
  * A small confirmation popup. Nothing is deleted until Delete is chosen;
- * Cancel, Escape and the backdrop leave it in place.
+ * Cancel leaves it in place.
  */
 
 type ConfirmDialogProps = {

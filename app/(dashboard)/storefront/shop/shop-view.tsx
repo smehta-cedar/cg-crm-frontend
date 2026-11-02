@@ -412,7 +412,7 @@ type RequestReceivedDialogProps = {
   onClose: () => void;
 };
 
-/** Success popup after Checkout; OK / Escape / backdrop returns to the catalog. */
+/** Success popup after Checkout; OK returns to the catalog. */
 function RequestReceivedDialog({ placed, onClose }: RequestReceivedDialogProps) {
   const open = placed !== null;
   const { dialogRef, close } = useModalDialog(open);
