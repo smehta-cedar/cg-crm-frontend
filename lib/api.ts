@@ -43,18 +43,31 @@ type ApiRequestOptions = {
   body?: unknown;
   /** Bearer access token for endpoints that need a signed-in user. */
   token?: string | null;
+  /** The visitor's IP, for the API's sign-in rate limit; see visitorIp() in app/login/actions.ts. */
+  visitorIp?: string | null;
 };
+
+/**
+ * Shared with the API (its VISITOR_IP_SECRET): shows that a visitor IP comes
+ * from this server, so sign-ins are rate-limited per visitor rather than all
+ * together under this server's address. Unset, no visitor IP is sent.
+ */
+const VISITOR_IP_SECRET = process.env.VISITOR_IP_SECRET ?? "";
 
 /** The pair the API issues on login, refresh and password change. */
 export type TokenPair = { access: string; refresh: string };
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<ApiResult<T>> {
-  const { method = "GET", body, token } = options;
+  const { method = "GET", body, token, visitorIp } = options;
   const headers: Record<string, string> = { Accept: "application/json" };
   const multipart = body instanceof FormData;
   // fetch sets the multipart Content-Type itself, with the boundary.
   if (body !== undefined && !multipart) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
+  if (visitorIp && VISITOR_IP_SECRET) {
+    headers["X-Visitor-IP"] = visitorIp;
+    headers["X-Visitor-Secret"] = VISITOR_IP_SECRET;
+  }
 
   let response: Response;
   try {

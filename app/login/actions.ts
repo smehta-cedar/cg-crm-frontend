@@ -16,7 +16,7 @@
  *   network_error            the API is down                            -> "Can't reach the server."
  */
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiRequest, type TokenPair } from "@/lib/api";
 import { clearAuthCookies, REFRESH_COOKIE, setAuthCookies } from "@/lib/auth-cookies";
@@ -30,6 +30,16 @@ export type LoginState = {
 
 const NO_ERRORS: LoginState = { fieldErrors: {}, error: null };
 
+/**
+ * The visitor's IP, for the API's sign-in rate limit: the last X-Forwarded-For
+ * entry, which the proxy in front of this server (or Next itself, with none)
+ * added. Entries before it come from the browser and could be made up.
+ */
+async function visitorIp(): Promise<string | null> {
+  const forwarded = (await headers()).get("x-forwarded-for") ?? "";
+  return forwarded.split(",").pop()?.trim() || null;
+}
+
 /** The agent form's first step. `sentTo` is set once the API took the request. */
 export type AgentCodeState = { sentTo: string | null; emailError?: string; error: string | null };
 
@@ -42,7 +52,11 @@ export async function requestAgentCode(_previous: AgentCodeState, formData: Form
   const email = String(formData.get("email") ?? "").trim();
   if (!email) return { sentTo: null, emailError: "Enter your work Gmail.", error: null };
 
-  const result = await apiRequest("/auth/agent-code/", { method: "POST", body: { email } });
+  const result = await apiRequest("/auth/agent-code/", {
+    method: "POST",
+    body: { email },
+    visitorIp: await visitorIp(),
+  });
   if (!result.ok) {
     const emailError = result.code === "invalid" ? result.errors?.email?.[0] : undefined;
     return { sentTo: null, emailError, error: emailError ? null : result.message };
@@ -67,6 +81,7 @@ export async function login(_previous: LoginState, formData: FormData): Promise<
   const result = await apiRequest<TokenPair & { user: ApiUser }>("/auth/login/", {
     method: "POST",
     body: { email, password },
+    visitorIp: await visitorIp(),
   });
 
   if (!result.ok) {
@@ -107,6 +122,7 @@ export async function agentLogin(_previous: LoginState, formData: FormData): Pro
   const result = await apiRequest<TokenPair & { user: ApiUser }>("/auth/agent-login/", {
     method: "POST",
     body: { email, code },
+    visitorIp: await visitorIp(),
   });
 
   if (!result.ok) {
