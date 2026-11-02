@@ -10,6 +10,7 @@ import { BrandLogo } from "./brand-logo";
 import { ChangePasswordDialog } from "./change-password-dialog";
 import { NavbarSearch } from "./navbar-search";
 import { NotificationsMenu } from "./notifications-menu";
+import { usePreferences } from "./preferences";
 import { RequestDialog } from "./request-dialog";
 import { TaskDialog } from "./task-dialog";
 import type { NavItem } from "./sidebar";
@@ -51,6 +52,8 @@ export function Navbar({
   searchIndex,
   user,
 }: NavbarProps) {
+  const { savePreference } = usePreferences();
+
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-surface px-4 sm:px-6 lg:pl-0 lg:pr-8">
@@ -113,7 +116,7 @@ export function Navbar({
         ) : null}
         <div className="ml-auto flex items-center justify-end gap-1 md:ml-0 md:flex-1">
           {user.agentId ? <AgentCreateRequestButton user={user} /> : <CreateMenu user={user} />}
-          <ThemeToggle />
+          <ThemeToggle onChange={(theme) => savePreference("theme", theme)} />
           <NotificationsMenu buttonClassName={ICON_BUTTON_CLASS} />
           <UserMenu user={user} />
         </div>

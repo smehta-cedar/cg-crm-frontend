@@ -132,6 +132,7 @@ only; the markup and classes are ours. v9's API is not v8's: `useTable` +
   columns={columns}        // DataTableColumn<T>[], stable (module const or useMemo)
   getRowId={(agent) => agent.id}
   unit={["agent", "agents"]}
+  saveAs="agents"        // the user's sort + rows per page are saved under this
   emptyMessage="No passwords for Humana."   // optional; rows empty, no search
   renderDetails={(agent) => …}           // optional; see §7
 />
@@ -145,6 +146,12 @@ A column: `{ id, header, cell(row, ctx), className?, sortValue?, searchText?, sr
   One column at a time. Numbers compare numerically (`Number(id)`, counts);
   text ignores case and sorts "2" before "10". Status columns sort by
   `statusRank`. The sorted `th` gets `aria-sort`; the arrow icon is `aria-hidden`.
+- **Saved per user:** the sort and rows per page the user picks are saved on
+  their account (`preferences` on `/auth/me/`) under `table.<saveAs>`, so the
+  table opens that way next time, in any browser (`components/preferences.tsx`).
+  `saveAs` is required on `DataTable` and `ProfileTable`; give each table its
+  own name (`"agents"`, `"carrier.policies"`). Tables sharing a name share the
+  settings, as the profile panels do (`"profile.state-licenses"`).
 - **Search:** the table has no box of its own; the navbar search
   (`components/navbar-search.tsx`) is the only one. It has a scope select
   joined to its left, listing the sidebar links marked `searchable: true` in

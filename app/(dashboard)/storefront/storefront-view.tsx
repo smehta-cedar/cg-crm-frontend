@@ -224,6 +224,7 @@ export function StorefrontView({ initialProducts, notes }: StorefrontViewProps) 
           columns={columns}
           getRowId={(product) => product.id}
           unit={["product", "products"]}
+          saveAs="products"
           renderDetails={(product) => (
             <section className="max-w-2xl">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">Notes</h3>

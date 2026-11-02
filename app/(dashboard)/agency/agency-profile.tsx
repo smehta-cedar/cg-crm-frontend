@@ -227,7 +227,12 @@ export function AgencyProfile({
             {contracts.length === 0 ? (
               <PanelEmpty>No carrier contracts recorded.</PanelEmpty>
             ) : (
-              <ProfileTable columns={CONTRACT_COLUMNS} rows={contracts} rowKey={(contract) => contract.id}>
+              <ProfileTable
+                columns={CONTRACT_COLUMNS}
+                rows={contracts}
+                rowKey={(contract) => contract.id}
+                saveAs="agency.contracts"
+              >
                 {(contract) => (
                   <>
                     <td className="px-3 py-1.5 align-middle whitespace-nowrap">
@@ -282,7 +287,7 @@ export function AgencyProfile({
           {agents.length === 0 ? (
             <PanelEmpty>No agents yet. Add them on the Agents page.</PanelEmpty>
           ) : (
-            <ProfileTable columns={AGENT_COLUMNS} rows={agents} rowKey={(agent) => agent.id}>
+            <ProfileTable columns={AGENT_COLUMNS} rows={agents} rowKey={(agent) => agent.id} saveAs="agency.agents">
               {(agent) => (
                 <>
                   <td className="px-3 py-2.5 align-middle sm:whitespace-nowrap">

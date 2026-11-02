@@ -157,7 +157,7 @@ export function CarrierProfile({ carrier, agents, initialPolicies, policyTypes, 
           {agentRows.length === 0 ? (
             <PanelEmpty>No contracted agents.</PanelEmpty>
           ) : (
-            <ProfileTable columns={AGENT_COLUMNS} rows={agentRows} rowKey={(agent) => agent.id}>
+            <ProfileTable columns={AGENT_COLUMNS} rows={agentRows} rowKey={(agent) => agent.id} saveAs="carrier.agents">
               {(agent) => (
                 <>
                   <td className="min-w-0 truncate px-3 py-2.5 align-middle sm:whitespace-nowrap">
@@ -196,7 +196,7 @@ export function CarrierProfile({ carrier, agents, initialPolicies, policyTypes, 
           {policies.length === 0 ? (
             <PanelEmpty>No policies recorded.</PanelEmpty>
           ) : (
-            <ProfileTable columns={POLICY_COLUMNS} rows={policies} rowKey={(policy) => policy.id}>
+            <ProfileTable columns={POLICY_COLUMNS} rows={policies} rowKey={(policy) => policy.id} saveAs="carrier.policies">
               {(policy) => (
                 <>
                   <td className="px-3 py-1.5 align-middle whitespace-nowrap">

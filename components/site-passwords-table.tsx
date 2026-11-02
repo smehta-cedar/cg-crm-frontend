@@ -66,6 +66,8 @@ type SitePasswordsTableProps = {
   aligned?: boolean;
   /** Starting rows per page; DataTable's 10 unless set (5 on profiles). */
   pageSize?: TablePageSize;
+  /** Name the user's sort and rows per page are saved under (DataTable). */
+  saveAs: string;
 };
 
 export function SitePasswordsTable({
@@ -75,6 +77,7 @@ export function SitePasswordsTable({
   emptyMessage,
   aligned = false,
   pageSize,
+  saveAs,
 }: SitePasswordsTableProps) {
   const columns = useMemo<DataTableColumn<SitePasswordRecord>[]>(() => {
     const columns: DataTableColumn<SitePasswordRecord>[] = [
@@ -174,6 +177,7 @@ export function SitePasswordsTable({
       unit={["site password", "site passwords"]}
       emptyMessage={emptyMessage}
       pageSize={pageSize}
+      saveAs={saveAs}
     />
   );
 }

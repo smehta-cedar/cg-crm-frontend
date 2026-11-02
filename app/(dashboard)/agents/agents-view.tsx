@@ -136,6 +136,7 @@ export function AgentsView() {
           columns={columns}
           getRowId={(agent) => agent.id}
           unit={["agent", "agents"]}
+          saveAs="agents"
         />
       )}
     </>

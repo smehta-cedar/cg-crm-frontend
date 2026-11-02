@@ -15,6 +15,7 @@ import {
 } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useTablePreference } from "@/components/preferences";
 import { TablePagination, useTablePagination, type TablePageSize } from "@/components/table-pagination";
 import { SEARCH_PARAM, searchWords } from "@/lib/search";
 
@@ -24,7 +25,8 @@ import { SEARCH_PARAM, searchWords } from "@/lib/search";
  * this component owns the markup (docs/entity-page-pattern.md §6–7), so cells
  * stay free to render links, badges, credential buttons and Edit. Client-side
  * pagination (5 / 10 / 20, starting at 10) sits under the table via
- * `table-pagination`.
+ * `table-pagination`. The sort and page size the user picks are saved on
+ * their account under `saveAs` (components/preferences.tsx).
  *
  * There is no search box here: the navbar search (components/navbar-search.tsx)
  * writes `?q=`, and the table filters on whatever that holds.
@@ -74,6 +76,11 @@ type DataTableProps<T extends RowData> = {
   emptyMessage?: ReactNode;
   /** Starting rows per page: 10 as a page's main table, 5 inside a profile panel. */
   pageSize?: TablePageSize;
+  /**
+   * Name the user's sort and rows per page are saved under, e.g. "agents".
+   * One per table; tables sharing a name share the settings.
+   */
+  saveAs: string;
 };
 
 const SEARCH_COLUMN_ID = "__search";
@@ -110,8 +117,10 @@ export function DataTable<T extends RowData>({
   renderDetails,
   emptyMessage,
   pageSize: defaultPageSize = 10,
+  saveAs,
 }: DataTableProps<T>) {
   const id = useId();
+  const [saved, saveTable] = useTablePreference(saveAs);
   const fixedLayout = columns.some((column) => column.width);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   // Dashboard routes render per request, so the server sees ?q= too and the
@@ -136,12 +145,17 @@ export function DataTable<T extends RowData>({
     return defs;
   }, [columns]);
 
+  // A saved sort on a column that is gone or no longer sortable is dropped.
+  const savedSort = saved.sort;
+  const initialSorting =
+    savedSort && columns.some((column) => column.id === savedSort.id && column.sortValue) ? [savedSort] : [];
+
   const table = useTable({
     features,
     columns: tableColumns,
     data: rows,
     getRowId: (row) => getRowId(row),
-    initialState: { globalFilter: urlQuery },
+    initialState: { globalFilter: urlQuery, sorting: initialSorting },
     sortDescFirst: false,
     enableMultiSort: false,
     globalFilterFn: matchesQuery<T>(),
@@ -161,7 +175,7 @@ export function DataTable<T extends RowData>({
     currentPage,
     pageCount,
     setPage,
-  } = useTablePagination(visibleRows, query, defaultPageSize);
+  } = useTablePagination(visibleRows, saveAs, defaultPageSize, query);
 
   const toggleExpanded = (rowId: string) =>
     setExpandedIds((current) => {
@@ -226,7 +240,11 @@ export function DataTable<T extends RowData>({
                     {sortColumn ? (
                       <button
                         type="button"
-                        onClick={() => sortColumn.toggleSorting()}
+                        onClick={() => {
+                          const next = sortColumn.getNextSortingOrder();
+                          sortColumn.toggleSorting();
+                          saveTable({ sort: next ? { id: column.id, desc: next === "desc" } : null });
+                        }}
                         className="-mx-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface-hover hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
                       >
                         {column.header}

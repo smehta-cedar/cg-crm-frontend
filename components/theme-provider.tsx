@@ -16,7 +16,8 @@ import {
  *
  * There is no "system" mode. The OS preference only decides what a visitor who
  * has never chosen sees first; the moment they use the toggle, that choice is
- * stored and outranks the OS from then on.
+ * stored and outranks the OS from then on. Signed in, it is also saved on
+ * their account, and AppShell applies it in any browser they use.
  *
  * The first paint is handled by THEME_SCRIPT below, inlined in <head> so the
  * class is on <html> before the browser paints. This provider only takes over

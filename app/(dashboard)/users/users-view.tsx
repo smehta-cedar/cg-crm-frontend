@@ -170,6 +170,7 @@ export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersV
           columns={columns}
           getRowId={({ user }) => user.id}
           unit={["user", "users"]}
+          saveAs="users"
           renderDetails={({ user }) => (
             <section className="max-w-2xl">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">

@@ -45,6 +45,8 @@ type PasswordsTableProps = {
   aligned?: boolean;
   /** Starting rows per page; DataTable's 10 unless set (5 on profiles). */
   pageSize?: TablePageSize;
+  /** Name the user's sort and rows per page are saved under (DataTable). */
+  saveAs: string;
 };
 
 /**
@@ -88,6 +90,7 @@ export function PasswordsTable({
   emptyMessage,
   aligned = false,
   pageSize,
+  saveAs,
 }: PasswordsTableProps) {
   const columns = useMemo<DataTableColumn<PasswordRecord>[]>(() => {
     const name = (text: string, href: string) =>
@@ -214,6 +217,7 @@ export function PasswordsTable({
       unit={["password", "passwords"]}
       emptyMessage={emptyMessage}
       pageSize={pageSize}
+      saveAs={saveAs}
     />
   );
 }

@@ -1027,6 +1027,7 @@ export function AgentProfile({
                     columns={["Action", ...CARRIER_COLUMNS]}
                     rows={agentCarriers}
                     rowKey={(carrier) => carrier.id}
+                    saveAs="agent.carriers"
                   >
                     {(carrier) => (
                       <>
@@ -1247,6 +1248,7 @@ export function AgentProfile({
                       passwords={shownSitePasswords}
                       onEdit={editSitePassword}
                       pageSize={5}
+                      saveAs="profile.site-passwords"
                     />
                   )}
                 </Panel>
