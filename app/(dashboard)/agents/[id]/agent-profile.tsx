@@ -496,7 +496,7 @@ export function AgentProfile({
   const [section, setSection] = useState<SectionKey | null>(null);
   // Carriers opens on its map (with the table under it); State licences on its table.
   const [carriersView, setCarriersView] = useState<PanelView>("map");
-  const [licencesView, setLicencesView] = useState<PanelView>("table");
+  const [licencesView, setLicencesView] = useState<PanelView>("map");
   // The carrier picked on the Carriers map's card: only its writable states light up.
   const [mapCarrierId, setMapCarrierId] = useState<string | null>(null);
   // Appointments added here are for this agent only.
@@ -1080,9 +1080,11 @@ export function AgentProfile({
                     counts={licenceCounts}
                     unit={["licence", "licences"]}
                     showCounts={false}
-                    bucketOf={(code) => {
-                      const license = licenceByState.get(code);
-                      return !license ? 0 : license.status === "active" ? 4 : 2;
+                    fillOf={(code) => {
+                      const status = licenceByState.get(code)?.status;
+                      if (!status) return undefined;
+                      if (status === "active") return "fill-map-active";
+                      return status === "expired" ? "fill-map-expired" : "fill-map-pending";
                     }}
                     describeState={(code) => {
                       const license = licenceByState.get(code);
@@ -1094,8 +1096,9 @@ export function AgentProfile({
                     }}
                     legendTitle="Licence"
                     legend={[
-                      { bucket: 4, label: "Active" },
-                      { bucket: 2, label: "Other status" },
+                      { swatch: "bg-map-active", label: "Active" },
+                      { swatch: "bg-map-pending", label: "Applied / Pending" },
+                      { swatch: "bg-map-expired", label: "Expired" },
                       { bucket: 0, label: "Not licensed" },
                     ]}
                     lineMarkers={(code) => licenceByState.get(code)}

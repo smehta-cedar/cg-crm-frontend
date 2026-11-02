@@ -141,6 +141,11 @@
   --color-map-health: #db2763;
   --color-map-both: #0d9488;
   --color-map-none: #9ca3af;
+  /* A licence's status on an agent's licences map: green active, yellow
+     applied / pending, red expired. */
+  --color-map-active: #16a34a;
+  --color-map-pending: #facc15;
+  --color-map-expired: #dc2626;
   /* Icon colours for the Life (heart) and Health (cross) map badges. */
   --color-line-life: #e11d48;
   --color-line-health: #0284c7;
@@ -258,6 +263,9 @@ html.dark {
   --color-map-health: #e2557f;
   --color-map-both: #2bb3a3;
   --color-map-none: #6b7280;
+  --color-map-active: #4ade80;
+  --color-map-pending: #fde047;
+  --color-map-expired: #f87171;
   --color-line-life: #fb7185;
   --color-line-health: #38bdf8;
 }
