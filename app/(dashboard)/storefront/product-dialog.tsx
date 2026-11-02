@@ -48,6 +48,9 @@ export const PRODUCT_FIELD_LABELS: Record<ProductField, string> = {
   status: "Status",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const PRODUCT_LIST_FIELDS: readonly ProductField[] = ["colors", "sizes"];
+
 /** "Forest Green" -> "forest-green": a custom colour's id from its label. */
 const slug = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 

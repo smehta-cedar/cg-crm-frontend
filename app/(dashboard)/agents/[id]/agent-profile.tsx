@@ -65,7 +65,7 @@ import {
 } from "../../certifications/certifications-table";
 import { AppointmentDialog } from "../../contracts/appointment-dialog";
 import { useAppointments } from "../../contracts/use-appointments";
-import { AGENT_FIELD_LABELS } from "../agent-dialog";
+import { AGENT_FIELD_LABELS, AGENT_LIST_FIELDS } from "../agent-dialog";
 
 /*
  * Profile for one agent: identity, then everything linked to them — the states
@@ -1258,7 +1258,7 @@ export function AgentProfile({
             <Panel title="History" count={notes.length}>
               {/* Cancels NoteList's own top margin; the panel body already pads. */}
               <div className="-mt-2">
-                <HydratedNoteList notes={notes} labels={AGENT_FIELD_LABELS} />
+                <HydratedNoteList notes={notes} labels={AGENT_FIELD_LABELS} lists={AGENT_LIST_FIELDS} />
               </div>
             </Panel>
           ) : shown === null ? (

@@ -71,6 +71,16 @@ export const AGENT_FIELD_LABELS: Record<AgentField, string> = {
   licenseDates: "Licence dates",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const AGENT_LIST_FIELDS: readonly AgentField[] = [
+  "aliases",
+  "licensedStates",
+  "licenseNumbers",
+  "licenseStatuses",
+  "licenseLines",
+  "licenseDates",
+];
+
 const FORM_LABELS: ProducerLabels = {
   name: "Name",
   aliases: "Aliases",

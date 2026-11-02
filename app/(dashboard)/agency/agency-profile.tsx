@@ -33,7 +33,7 @@ import {
 } from "./agency-contract-dialog";
 import { saveAgencyContract } from "./contract-actions";
 import { addPolicyType } from "./policy-type-actions";
-import { AGENCY_FIELD_LABELS, AgencyDialog, type AgencyError, type AgencyValues } from "./agency-dialog";
+import { AGENCY_FIELD_LABELS, AGENCY_LIST_FIELDS, AgencyDialog, type AgencyError, type AgencyValues } from "./agency-dialog";
 import { AgencyLicenseDialog, type AgencyLicenseEditor, type AgencyLicenseValues } from "./license-dialog";
 
 /*
@@ -332,7 +332,7 @@ export function AgencyProfile({
         <Panel title="History" count={notes.length} className="xl:col-span-2">
           {/* Cancels NoteList's own top margin; the panel body already pads. */}
           <div className="-mt-2">
-            <HydratedNoteList notes={notes} labels={AGENCY_FIELD_LABELS} />
+            <HydratedNoteList notes={notes} labels={AGENCY_FIELD_LABELS} lists={AGENCY_LIST_FIELDS} />
           </div>
         </Panel>
       </div>

@@ -37,6 +37,9 @@ export const USER_FIELD_LABELS: Record<UserField, string> = {
   password: "Password",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const USER_LIST_FIELDS: readonly UserField[] = ["roles"];
+
 type UserDialogProps = {
   /** Null keeps the dialog closed. */
   editor: UserEditor | null;

@@ -38,7 +38,7 @@ Shared pieces (extracted when Carriers landed — use these, don't copy):
 | `components/page-header.tsx` | `PageHeader` (sr-only `<h1>` title — the navbar shows the page name — plus description and `actions` slot) |
 | `components/empty-state.tsx` | `EmptyState` (title, description, `action`) |
 | `components/field.tsx` | `Field` (label + input + hint/error; `required` adds a red star, `optional` a "(optional)" suffix — a form uses one convention or the other), `RequiredStar` |
-| `components/note-list.tsx` | `NoteList` (generic; pass `labels={FIELD_LABELS}`) |
+| `components/note-list.tsx` | `NoteList` (generic; pass `labels={FIELD_LABELS}` and `lists={LIST_FIELDS}`) |
 | `components/data-table.tsx` | `DataTable`, `DataTableColumn<T>`, `DataTableRowContext` (sort + search + pagination + expandable rows, §6) |
 | `components/table-pagination.tsx` | `TablePagination`, `useTablePagination` (5 / 10 / 20 page sizes; used by `DataTable` and `ProfileTable`) |
 | `components/status-badge.tsx` | `StatusBadge`, `statusLabel`, `statusRank` (sort order: active, pending, applied, expired, cancelled, inactive; applied, expired and cancelled are state-licence only) |
@@ -103,7 +103,9 @@ type <Entity>Note = {
 - Notes list newest first (`get…Notes()` sorts desc; new notes are prepended).
 - Display: header `Added · Sep 2, 2026, 9:05 AM` (`toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })` inside `<time dateTime>`), then one line per change:
   - added: `Name: Denise Washington`
-  - edited: `Phone: 555-010-4400 → 555-010-4410` (arrow `aria-hidden`, sr-only "changed to"; blanks show `(empty)`)
+  - edited: only what is new, never the value before. `Phone: 555-010-4410`; a cleared field reads `Phone: removed`
+  - edited list (a field in `LIST_FIELDS`, next to `FIELD_LABELS`): only the items added or removed, `Licensed states: added NY · removed TX`.
+    An item keyed by a state that changed (`TX pending` → `TX active`) shows bare: `Licence statuses: TX active`
 - Timestamps render only inside expanded rows (client state, closed on first
   render), which avoids server/client timezone hydration mismatches. Keep it
   that way or format dates on one side only.

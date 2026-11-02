@@ -68,6 +68,9 @@ export const APPOINTMENT_FIELD_LABELS: Record<CarrierContractField, string> = {
   appointedStates: "States",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const APPOINTMENT_LIST_FIELDS: readonly CarrierContractField[] = ["appointedStates"];
+
 /** The statuses a contract can have, in the order the dropdown lists them; the API's CONTRACT_STATUSES. */
 export const CONTRACT_STATUSES: readonly ContractStatus[] = ["active", "applied", "pending", "inactive"];
 
