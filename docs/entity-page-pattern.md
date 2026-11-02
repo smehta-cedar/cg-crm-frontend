@@ -749,6 +749,14 @@ appointment. Keeping `appointedStates` as a stored subset (rather than deriving
 it as the whole intersection) is what lets a carrier appoint an agent in fewer
 states than they could otherwise write in.
 
+Wherever the result leaves a state or a carrier out, the screen says why,
+never just "none". `unwritableReasons(codes, appointed, licensed, available,
+names)` gives one sentence per ceiling that leaves `codes` out, in the
+Appointment dialog's words — the carrier's footprint first, then the licence,
+then the appointment, so a state missing from several is named once.
+`noWritableReason` is the line for an appointment that writes nowhere
+("The Humana contract lists no states." when it lists none).
+
 - All three lists follow the same rules: empty means none yet, never "every
   state"; a stored row missing the field loads as `[]` with a `console.warn`;
   values are unique codes in code order. Notes label them "Licensed states"
@@ -899,7 +907,11 @@ section list. The agent profile, top to bottom:
   - **Carriers**: a table (Carrier, Writing number, Writable states, Status;
     writing number from the contract, or "No writing number") with
     "+ Add carrier" in its title row, which opens `AppointmentDialog` with
-    this agent locked.
+    this agent locked. A carrier with no writable states says why in that
+    cell (`noWritableReason`), and so does its Pending item. The Carriers
+    map's state panel lists, under "Not writable here", each of the agent's
+    other carriers with its reason (or says once that the agent isn't
+    licensed there), and a picked carrier's tooltip names the reason.
   - **State licences**: `StateLicensesPanel`, still edited through the
     profile's Edit button, not from the panel.
   - **Passwords**: `PasswordsPanel` (carrier passwords only). Add opens the

@@ -45,7 +45,7 @@ import {
   licenseStatusesOf,
   type StateLicense,
 } from "@/lib/state-licenses";
-import { US_STATE_NAMES, US_STATES, writableStates } from "@/lib/us-states";
+import { US_STATE_NAMES, US_STATES, noWritableReason, unwritableReasons, writableStates } from "@/lib/us-states";
 import { byName } from "@/lib/text";
 import { AddPasswordDialog, type AddPasswordEditor } from "../../passwords/password-dialog";
 import { deleteCertification, listAgentCertifications, saveCertification } from "../../certifications/actions";
@@ -343,6 +343,7 @@ type PendingInput = {
   agent: AgentRecord;
   agentCarriers: (CarrierOption & {
     writable: string[];
+    unwritable: string;
     writingNumber: string;
     contract: Pick<CarrierContractRecord, "status">;
   })[];
@@ -380,7 +381,7 @@ function pendingItems({ agent, agentCarriers, passwords }: PendingInput): Pendin
       items.push({
         key: `states-${carrier.id}`,
         title: `Finish the ${carrier.name} contract`,
-        detail: "Appointed, but with no writable states yet.",
+        detail: `Appointed, but with no writable states yet. ${carrier.unwritable}`,
         href: "/contracts",
         linkLabel: "Contracts",
       });
@@ -525,6 +526,11 @@ export function AgentProfile({
             {
               ...carrier,
               writable: writableStates(contract.appointedStates, agent.licensedStates, carrier.availableStates),
+              // Why `writable` is empty; "" when it isn't.
+              unwritable: noWritableReason(contract.appointedStates, agent.licensedStates, carrier.availableStates, {
+                agent: agent.name,
+                carrier: carrier.name,
+              }),
               writingNumber: contract.writingNumber,
               contract,
             },
@@ -933,9 +939,17 @@ export function AgentProfile({
                             bucketOf: () => 0,
                             highlighted: mapCarrier.writable,
                             describeState: (code: string) =>
-                              `${US_STATE_NAMES[code] ?? code} · ${
-                                mapCarrier.writable.includes(code) ? "Writable" : "Not writable"
-                              } with ${mapCarrier.name} · ${licensedText(code)}`,
+                              mapCarrier.writable.includes(code)
+                                ? `${US_STATE_NAMES[code] ?? code} · Writable with ${mapCarrier.name} · ${licensedText(code)}`
+                                : `${US_STATE_NAMES[code] ?? code} · Not writable: ${
+                                    unwritableReasons(
+                                      [code],
+                                      mapCarrier.contract.appointedStates,
+                                      agent.licensedStates,
+                                      mapCarrier.availableStates,
+                                      { agent: agent.name, carrier: mapCarrier.name },
+                                    )[0]
+                                  }`,
                             legendTitle: mapCarrier.name,
                             legend: [
                               { bucket: "pick" as const, label: "Writable" },
@@ -973,6 +987,22 @@ export function AgentProfile({
                       renderPanelSubtitle={(code) => <LicenseNumber value={agent.licenseNumbers[code]} />}
                       renderPanel={(code) => {
                         const here = agentCarriers.filter((carrier) => carrier.writable.includes(code));
+                        const licensed = agent.licensedStates.includes(code);
+                        // The agent's other carriers and what keeps each out of this state.
+                        // Unlicensed, that is the one reason, so it shows once instead.
+                        const blocked = licensed
+                          ? agentCarriers.flatMap((carrier) =>
+                              carrier.writable.includes(code)
+                                ? []
+                                : unwritableReasons(
+                                    [code],
+                                    carrier.contract.appointedStates,
+                                    agent.licensedStates,
+                                    carrier.availableStates,
+                                    { agent: agent.name, carrier: carrier.name },
+                                  ).map((reason) => ({ id: carrier.id, reason })),
+                            )
+                          : [];
                         return (
                           <>
                             <p role="status" className="text-xs text-fg-muted">
@@ -1018,6 +1048,20 @@ export function AgentProfile({
                                 {agent.name} can&apos;t write in {US_STATE_NAMES[code] ?? code} with any carrier yet.
                               </p>
                             )}
+                            {!licensed ? (
+                              <p className="mt-3 text-sm text-fg-subtle">
+                                {agent.name} isn&apos;t licensed in {US_STATE_NAMES[code] ?? code}.
+                              </p>
+                            ) : blocked.length > 0 ? (
+                              <>
+                                <h4 className="mt-5 text-xs font-medium text-fg-muted">Not writable here</h4>
+                                <ul className="mt-1 space-y-1 text-sm text-fg-subtle">
+                                  {blocked.map(({ id, reason }) => (
+                                    <li key={id}>{reason}.</li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : null}
                           </>
                         );
                       }}
@@ -1056,7 +1100,7 @@ export function AgentProfile({
                         <StateChipCell
                           codes={carrier.writable}
                           label={`States writable with ${carrier.name}`}
-                          empty="No states yet"
+                          empty={`None. ${carrier.unwritable}`}
                         />
                         <td className="px-3 py-2.5 align-middle">
                           <StatusBadge status={carrier.contract.status} />
