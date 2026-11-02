@@ -38,7 +38,7 @@ Shared pieces (extracted when Carriers landed — use these, don't copy):
 | `components/page-header.tsx` | `PageHeader` (sr-only `<h1>` title — the navbar shows the page name — plus description and `actions` slot) |
 | `components/empty-state.tsx` | `EmptyState` (title, description, `action`) |
 | `components/field.tsx` | `Field` (label + input + hint/error; `required` adds a red star, `optional` a "(optional)" suffix — a form uses one convention or the other), `RequiredStar` |
-| `components/note-list.tsx` | `NoteList` (generic; pass `labels={FIELD_LABELS}`) |
+| `components/note-list.tsx` | `NoteList` (generic; pass `labels={FIELD_LABELS}` and `lists={LIST_FIELDS}`) |
 | `components/data-table.tsx` | `DataTable`, `DataTableColumn<T>`, `DataTableRowContext` (sort + search + pagination + expandable rows, §6) |
 | `components/table-pagination.tsx` | `TablePagination`, `useTablePagination` (5 / 10 / 20 page sizes; used by `DataTable` and `ProfileTable`) |
 | `components/status-badge.tsx` | `StatusBadge`, `statusLabel`, `statusRank` (sort order: active, pending, applied, expired, cancelled, inactive; applied, expired and cancelled are state-licence only) |
@@ -103,7 +103,9 @@ type <Entity>Note = {
 - Notes list newest first (`get…Notes()` sorts desc; new notes are prepended).
 - Display: header `Added · Sep 2, 2026, 9:05 AM` (`toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })` inside `<time dateTime>`), then one line per change:
   - added: `Name: Denise Washington`
-  - edited: `Phone: 555-010-4400 → 555-010-4410` (arrow `aria-hidden`, sr-only "changed to"; blanks show `(empty)`)
+  - edited: only what is new, never the value before. `Phone: 555-010-4410`; a cleared field reads `Phone: removed`
+  - edited list (a field in `LIST_FIELDS`, next to `FIELD_LABELS`): only the items added or removed, `Licensed states: added NY · removed TX`.
+    An item keyed by a state that changed (`TX pending` → `TX active`) shows bare: `Licence statuses: TX active`
 - Timestamps render only inside expanded rows (client state, closed on first
   render), which avoids server/client timezone hydration mismatches. Keep it
   that way or format dates on one side only.
@@ -132,6 +134,7 @@ only; the markup and classes are ours. v9's API is not v8's: `useTable` +
   columns={columns}        // DataTableColumn<T>[], stable (module const or useMemo)
   getRowId={(agent) => agent.id}
   unit={["agent", "agents"]}
+  saveAs="agents"        // the user's sort + rows per page are saved under this
   emptyMessage="No passwords for Humana."   // optional; rows empty, no search
   renderDetails={(agent) => …}           // optional; see §7
 />
@@ -145,6 +148,12 @@ A column: `{ id, header, cell(row, ctx), className?, sortValue?, searchText?, sr
   One column at a time. Numbers compare numerically (`Number(id)`, counts);
   text ignores case and sorts "2" before "10". Status columns sort by
   `statusRank`. The sorted `th` gets `aria-sort`; the arrow icon is `aria-hidden`.
+- **Saved per user:** the sort and rows per page the user picks are saved on
+  their account (`preferences` on `/auth/me/`) under `table.<saveAs>`, so the
+  table opens that way next time, in any browser (`components/preferences.tsx`).
+  `saveAs` is required on `DataTable` and `ProfileTable`; give each table its
+  own name (`"agents"`, `"carrier.policies"`). Tables sharing a name share the
+  settings, as the profile panels do (`"profile.state-licenses"`).
 - **Search:** the table has no box of its own; the navbar search
   (`components/navbar-search.tsx`) is the only one. It has a scope select
   joined to its left, listing the sidebar links marked `searchable: true` in
@@ -173,10 +182,11 @@ A column: `{ id, header, cell(row, ctx), className?, sortValue?, searchText?, sr
   password column `searchText` or `sortValue`.
 - **Count:** above the table on the right, `aria-live="polite"`: "12 agents", or
   "3 of 12 agents" while searching.
-- **Pagination:** client-side, under the table (`table-pagination.tsx`). Default
-  5 rows; Show select for 5 / 10 / 20; range text and ‹ ›. Hidden while the
-  filtered list fits in 5 or fewer. Resets to page 1 when the search changes.
-  `ProfileTable` on profiles uses the same control.
+- **Pagination:** client-side, under the table (`table-pagination.tsx`). Show
+  select for 5 / 10 / 20; range text and ‹ ›. A page's main `DataTable` starts
+  at 10 rows; tables inside profile panels start at 5 (`ProfileTable`, and
+  `pageSize={5}` on the password tables there). Hidden while the filtered list
+  fits in 5 or fewer. Resets to page 1 when the search changes.
 - **No match:** one row, "No agents match “foo”." with a Clear search button (drops `?q=`, which
   also empties the navbar box).
   `EmptyState` is still used by the view when the list itself is empty.
@@ -238,14 +248,13 @@ applies to the lists that pass `renderDetails`.
 - One native `<dialog>` for both modes, state
   `type Editor = { mode: "add" } | { mode: "edit"; record }`.
 - Open by setting the editor; an effect calls `showModal()` after render. The
-  form renders only while the editor is set, so closing (Cancel, Escape,
-  backdrop click, save) clears the editor in `onClose` and unmounts/resets the form.
-- Backdrop click closes (`event.target === event.currentTarget`; the form fills the dialog).
+  form renders only while the editor is set, so closing (Cancel or save)
+  clears the editor in `onClose` and unmounts/resets the form.
+- Only Cancel or save closes it: backdrop clicks do nothing and Escape is
+  swallowed (`ModalDialog` prevents both `cancel` and the Escape keydown).
 - Classes: `m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-lg bg-surface p-0 shadow-xl backdrop:bg-scrim`
   (`m-auto` is needed because Tailwind preflight zeroes dialog margins).
-- The dialog stays `p-0`; the `<form>` owns the inset (`p-6`). Padding on the
-  dialog itself would create a ring inside it where clicks hit the backdrop
-  handler and close the form.
+- The dialog stays `p-0`; the `<form>` owns the inset (`p-6`).
 - Content: `h2` title (`Add <entity>` / `Edit <name>`), one-line description
   saying it is not saved anywhere, fields grid `mt-5 grid gap-4 sm:grid-cols-2`
   (wide fields `sm:col-span-2`), footer `mt-6 flex justify-end gap-2` with
@@ -351,7 +360,7 @@ To change how the app looks in either mode, edit the token block in
    table, expandable row for list/secondary data + notes, add/edit dialog,
    diff → note, unsaved banner.
 6. `npm run typecheck` and `next build`, then click through add, edit (no-op
-   and real change), duplicate check, expand/collapse, Escape/backdrop close.
+   and real change), duplicate check, expand/collapse, Escape/backdrop leave the dialog open.
    The typecheck has `noUnusedLocals` and `noUnusedParameters` on, so an unused
    import, local or parameter fails it; there is no ESLint (typescript-eslint
    can't run on the TypeScript 7 toolchain this project uses).
@@ -740,6 +749,14 @@ appointment. Keeping `appointedStates` as a stored subset (rather than deriving
 it as the whole intersection) is what lets a carrier appoint an agent in fewer
 states than they could otherwise write in.
 
+Wherever the result leaves a state or a carrier out, the screen says why,
+never just "none". `unwritableReasons(codes, appointed, licensed, available,
+names)` gives one sentence per ceiling that leaves `codes` out, in the
+Appointment dialog's words — the carrier's footprint first, then the licence,
+then the appointment, so a state missing from several is named once.
+`noWritableReason` is the line for an appointment that writes nowhere
+("The Humana contract lists no states." when it lists none).
+
 - All three lists follow the same rules: empty means none yet, never "every
   state"; a stored row missing the field loads as `[]` with a `console.warn`;
   values are unique codes in code order. Notes label them "Licensed states"
@@ -890,7 +907,11 @@ section list. The agent profile, top to bottom:
   - **Carriers**: a table (Carrier, Writing number, Writable states, Status;
     writing number from the contract, or "No writing number") with
     "+ Add carrier" in its title row, which opens `AppointmentDialog` with
-    this agent locked.
+    this agent locked. A carrier with no writable states says why in that
+    cell (`noWritableReason`), and so does its Pending item. The Carriers
+    map's state panel lists, under "Not writable here", each of the agent's
+    other carriers with its reason (or says once that the agent isn't
+    licensed there), and a picked carrier's tooltip names the reason.
   - **State licences**: `StateLicensesPanel`, still edited through the
     profile's Edit button, not from the panel.
   - **Passwords**: `PasswordsPanel` (carrier passwords only). Add opens the

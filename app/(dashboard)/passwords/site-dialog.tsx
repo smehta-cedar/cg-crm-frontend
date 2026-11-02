@@ -24,7 +24,7 @@ type SiteDialogProps = {
   /** Null keeps the dialog closed. */
   editor: SiteEditor | null;
   onSaved: (site: SiteRecord) => void;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

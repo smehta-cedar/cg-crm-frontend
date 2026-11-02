@@ -262,6 +262,8 @@ type ProfileTableProps<T> = {
    * clicks on links and buttons inside the row are theirs, not the row's.
    */
   onRowClick?: (row: T) => void;
+  /** Name the user's rows per page is saved under, as on DataTable. */
+  saveAs: string;
 };
 
 /**
@@ -269,8 +271,11 @@ type ProfileTableProps<T> = {
  * there are more than 5 rows — default page size 5, with 10 and 20 options.
  * `table-fixed` keeps columns evenly spaced; the caller renders the cells.
  */
-export function ProfileTable<T>({ columns, rows, rowKey, children, onRowClick }: ProfileTableProps<T>) {
-  const { pageItems, start, pageSize, setPageSize, currentPage, pageCount, setPage } = useTablePagination(rows);
+export function ProfileTable<T>({ columns, rows, rowKey, children, onRowClick, saveAs }: ProfileTableProps<T>) {
+  const { pageItems, start, pageSize, setPageSize, currentPage, pageCount, setPage } = useTablePagination(
+    rows,
+    saveAs,
+  );
 
   return (
     <div>
@@ -401,6 +406,8 @@ export function PasswordsPanel({
           linkParties={linkParties}
           onEdit={onEdit}
           onDelete={onDelete}
+          pageSize={5}
+          saveAs="profile.passwords"
         />
       )}
     </Panel>

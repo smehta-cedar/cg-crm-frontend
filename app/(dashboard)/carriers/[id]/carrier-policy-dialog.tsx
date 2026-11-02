@@ -67,7 +67,7 @@ type CarrierPolicyDialogProps = {
   policyTypes: PolicyTypeRecord[];
   /** Saves the values; resolves with the errors to show instead of closing. */
   onSave: (values: CarrierPolicyValues) => Promise<CarrierPolicyError[]>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

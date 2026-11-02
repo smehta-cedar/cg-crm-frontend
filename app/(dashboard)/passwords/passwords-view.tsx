@@ -280,6 +280,7 @@ export function PasswordsView({ passwords, sitePasswords, sites, agency, agents,
             <PasswordsTable
               passwords={carrierRows}
               aligned
+              saveAs="passwords"
               onEdit={editCarrierPassword}
               onDelete={removeCarrierPassword}
               emptyMessage={emptyFor("No passwords", agentFilter, carrierFilter && carrierName(carrierFilter))}
@@ -322,6 +323,7 @@ export function PasswordsView({ passwords, sitePasswords, sites, agency, agents,
             <SitePasswordsTable
               passwords={siteRows}
               aligned
+              saveAs="site-passwords"
               onEdit={editSitePassword}
               onDelete={removeSitePassword}
               emptyMessage={emptyFor("No site passwords", siteAgentFilter, siteFilter && siteName(siteFilter))}

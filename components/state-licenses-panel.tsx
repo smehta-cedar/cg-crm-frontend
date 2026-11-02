@@ -65,7 +65,7 @@ export function StateLicensesPanel({
       {licenses.length === 0 ? (
         <PanelEmpty>No state licences recorded.</PanelEmpty>
       ) : (
-        <ProfileTable columns={columns} rows={licenses} rowKey={(license) => license.id}>
+        <ProfileTable columns={columns} rows={licenses} rowKey={(license) => license.id} saveAs="profile.state-licenses">
           {(license) => (
             <>
               {onEdit || onDelete ? (

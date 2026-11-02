@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import type { SessionUser } from "@/lib/auth-user";
 import type { SearchIndex } from "@/lib/search";
 import { BrandLogo } from "./brand-logo";
 import { Navbar } from "./navbar";
+import { usePreferences } from "./preferences";
 import { currentNavLabel, Sidebar, type NavItem } from "./sidebar";
+import { useTheme } from "./theme-provider";
 
 /*
  * Page frame: sticky navbar on top, a nav rail on the left from `lg` up, and
@@ -19,8 +21,6 @@ import { currentNavLabel, Sidebar, type NavItem } from "./sidebar";
 
 /** Tailwind's `lg` breakpoint. */
 const DESKTOP_QUERY = "(min-width: 64rem)";
-/** Remembers the rail's collapsed state across visits. */
-const COLLAPSED_KEY = "sidebar-collapsed";
 
 type AppShellProps = {
   navItems: NavItem[];
@@ -47,30 +47,21 @@ export function AppShell({
   const drawerId = useId();
   const railId = useId();
   const pathname = usePathname();
-  // Starts expanded so the server and first client render agree; the stored
-  // preference is applied right after mount.
-  const [collapsed, setCollapsed] = useState(false);
+  const { preferences, savePreference } = usePreferences();
+  // Saved on the user's account, so the server already renders the rail at
+  // the width they left it.
+  const collapsed = preferences.sidebarCollapsed ?? false;
+  const toggleCollapsed = () => savePreference("sidebarCollapsed", !collapsed);
 
-  useEffect(() => {
-    try {
-      setCollapsed(window.localStorage.getItem(COLLAPSED_KEY) === "true");
-    } catch {
-      // Storage can be unavailable (private mode, blocked cookies); the
-      // default expanded rail is a fine fallback.
-    }
-  }, []);
-
-  const toggleCollapsed = () => {
-    setCollapsed((previous) => {
-      const next = !previous;
-      try {
-        window.localStorage.setItem(COLLAPSED_KEY, String(next));
-      } catch {
-        // Preference just will not survive the session.
-      }
-      return next;
-    });
-  };
+  // The user's saved theme wins over whatever this browser showed last
+  // (another user's, or the OS default on a browser they haven't used).
+  // Before paint; setTheme also keeps a copy in this browser, so the next
+  // full load starts in it. No saved theme leaves the browser's alone.
+  const { setTheme } = useTheme();
+  const savedTheme = preferences.theme;
+  useLayoutEffect(() => {
+    if (savedTheme) setTheme(savedTheme);
+  }, [savedTheme, setTheme]);
 
   const openDrawer = () => drawerRef.current?.showModal();
   const closeDrawer = () => drawerRef.current?.close();

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { PreferencesProvider } from "@/components/preferences";
 import { RequestsProvider, type RequestParty } from "@/components/requests-store";
 import { getAgents } from "@/lib/agents";
 import { allowForbidden } from "@/lib/api-server";
@@ -42,20 +43,22 @@ export default async function DashboardLayout({
   });
 
   return (
-    <RequestsProvider
-      initialRequests={requests}
-      agents={agents.map(party).sort(byName)}
-      carriers={carriers.map(party).sort(byName)}
-    >
-      <AppShell
-        navItems={navItemsFor(user)}
-        footerItems={footerItemsFor(user)}
-        user={user}
-        searchIndex={searchIndex}
-        pageTitles={PAGE_TITLES}
+    <PreferencesProvider initial={user.preferences}>
+      <RequestsProvider
+        initialRequests={requests}
+        agents={agents.map(party).sort(byName)}
+        carriers={carriers.map(party).sort(byName)}
       >
-        {children}
-      </AppShell>
-    </RequestsProvider>
+        <AppShell
+          navItems={navItemsFor(user)}
+          footerItems={footerItemsFor(user)}
+          user={user}
+          searchIndex={searchIndex}
+          pageTitles={PAGE_TITLES}
+        >
+          {children}
+        </AppShell>
+      </RequestsProvider>
+    </PreferencesProvider>
   );
 }

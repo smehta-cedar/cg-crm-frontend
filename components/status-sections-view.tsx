@@ -29,8 +29,15 @@ export type StatusSection = {
   rows: StatusRow[];
 };
 
-/** `empty` is the whole page's empty message, e.g. "Nothing pending". */
-export function StatusSectionsView({ sections, empty }: { sections: StatusSection[]; empty: string }) {
+type StatusSectionsViewProps = {
+  sections: StatusSection[];
+  /** The whole page's empty message, e.g. "Nothing pending". */
+  empty: string;
+  /** Prefix the sections' rows per page are saved under, e.g. "pending". */
+  saveAs: string;
+};
+
+export function StatusSectionsView({ sections, empty, saveAs }: StatusSectionsViewProps) {
   const router = useRouter();
 
   if (sections.every((section) => section.rows.length === 0)) {
@@ -49,6 +56,7 @@ export function StatusSectionsView({ sections, empty }: { sections: StatusSectio
               rows={section.rows}
               rowKey={(row) => row.id}
               onRowClick={(row) => row.href && router.push(row.href)}
+              saveAs={`${saveAs}.${section.title}`}
             >
               {(row) => (
                 <>

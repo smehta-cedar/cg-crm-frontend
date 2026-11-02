@@ -120,7 +120,12 @@ export function CertificationsTable({
   ];
 
   return (
-    <ProfileTable columns={columns} rows={certifications} rowKey={(certification) => certification.id}>
+    <ProfileTable
+      columns={columns}
+      rows={certifications}
+      rowKey={(certification) => certification.id}
+      saveAs="profile.certifications"
+    >
       {(certification) => (
         <>
           {onEdit || onDelete ? (

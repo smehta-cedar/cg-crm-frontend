@@ -71,6 +71,16 @@ export const AGENT_FIELD_LABELS: Record<AgentField, string> = {
   licenseDates: "Licence dates",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const AGENT_LIST_FIELDS: readonly AgentField[] = [
+  "aliases",
+  "licensedStates",
+  "licenseNumbers",
+  "licenseStatuses",
+  "licenseLines",
+  "licenseDates",
+];
+
 const FORM_LABELS: ProducerLabels = {
   name: "Name",
   aliases: "Aliases",
@@ -88,7 +98,7 @@ type AgentDialogProps = {
   editor: AgentEditor | null;
   /** Saves the values; resolves with the error to show instead of closing. */
   onSave: (values: AgentValues) => Promise<AgentError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

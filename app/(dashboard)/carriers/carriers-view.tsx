@@ -115,6 +115,7 @@ export function CarriersView({ carriers }: CarriersViewProps) {
           columns={columns}
           getRowId={(carrier) => carrier.id}
           unit={["carrier", "carriers"]}
+          saveAs="carriers"
         />
       )}
     </>

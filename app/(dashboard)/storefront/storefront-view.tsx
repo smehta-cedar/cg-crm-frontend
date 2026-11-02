@@ -15,6 +15,7 @@ import { byName } from "@/lib/text";
 import { saveProduct } from "./actions";
 import {
   PRODUCT_FIELD_LABELS,
+  PRODUCT_LIST_FIELDS,
   ProductDialog,
   type ProductEditor,
   type ProductError,
@@ -224,12 +225,14 @@ export function StorefrontView({ initialProducts, notes }: StorefrontViewProps) 
           columns={columns}
           getRowId={(product) => product.id}
           unit={["product", "products"]}
+          saveAs="products"
           renderDetails={(product) => (
             <section className="max-w-2xl">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">Notes</h3>
               <NoteList
                 notes={notes.filter((note) => note.productId === product.id)}
                 labels={PRODUCT_FIELD_LABELS}
+                lists={PRODUCT_LIST_FIELDS}
               />
             </section>
           )}

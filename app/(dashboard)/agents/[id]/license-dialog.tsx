@@ -65,7 +65,7 @@ type AgentLicenseDialogProps = {
   onSave: (values: AgentLicenseValues, previousState: string | null) => Promise<string | null>;
   /** Removes the row for `state`. Resolves with the error to show. */
   onRemove: (state: string) => Promise<string | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

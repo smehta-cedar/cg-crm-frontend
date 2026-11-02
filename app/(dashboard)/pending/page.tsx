@@ -18,7 +18,7 @@ export default async function PendingPage() {
   return (
     <>
       <PageHeader title="Pending" />
-      <StatusSectionsView sections={await getStatusSections(user, ["pending"])} empty="Nothing pending" />
+      <StatusSectionsView sections={await getStatusSections(user, ["pending"])} empty="Nothing pending" saveAs="pending" />
     </>
   );
 }

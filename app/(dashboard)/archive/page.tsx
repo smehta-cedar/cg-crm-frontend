@@ -21,6 +21,7 @@ export default async function ArchivePage() {
       <StatusSectionsView
         sections={await getStatusSections(user, ["inactive", "expired", "cancelled"])}
         empty="Nothing archived"
+        saveAs="archive"
       />
     </>
   );

@@ -33,7 +33,7 @@ import {
 } from "./agency-contract-dialog";
 import { saveAgencyContract } from "./contract-actions";
 import { addPolicyType } from "./policy-type-actions";
-import { AGENCY_FIELD_LABELS, AgencyDialog, type AgencyError, type AgencyValues } from "./agency-dialog";
+import { AGENCY_FIELD_LABELS, AGENCY_LIST_FIELDS, AgencyDialog, type AgencyError, type AgencyValues } from "./agency-dialog";
 import { AgencyLicenseDialog, type AgencyLicenseEditor, type AgencyLicenseValues } from "./license-dialog";
 
 /*
@@ -227,7 +227,12 @@ export function AgencyProfile({
             {contracts.length === 0 ? (
               <PanelEmpty>No carrier contracts recorded.</PanelEmpty>
             ) : (
-              <ProfileTable columns={CONTRACT_COLUMNS} rows={contracts} rowKey={(contract) => contract.id}>
+              <ProfileTable
+                columns={CONTRACT_COLUMNS}
+                rows={contracts}
+                rowKey={(contract) => contract.id}
+                saveAs="agency.contracts"
+              >
                 {(contract) => (
                   <>
                     <td className="px-3 py-1.5 align-middle whitespace-nowrap">
@@ -282,7 +287,7 @@ export function AgencyProfile({
           {agents.length === 0 ? (
             <PanelEmpty>No agents yet. Add them on the Agents page.</PanelEmpty>
           ) : (
-            <ProfileTable columns={AGENT_COLUMNS} rows={agents} rowKey={(agent) => agent.id}>
+            <ProfileTable columns={AGENT_COLUMNS} rows={agents} rowKey={(agent) => agent.id} saveAs="agency.agents">
               {(agent) => (
                 <>
                   <td className="px-3 py-2.5 align-middle sm:whitespace-nowrap">
@@ -327,7 +332,7 @@ export function AgencyProfile({
         <Panel title="History" count={notes.length} className="xl:col-span-2">
           {/* Cancels NoteList's own top margin; the panel body already pads. */}
           <div className="-mt-2">
-            <HydratedNoteList notes={notes} labels={AGENCY_FIELD_LABELS} />
+            <HydratedNoteList notes={notes} labels={AGENCY_FIELD_LABELS} lists={AGENCY_LIST_FIELDS} />
           </div>
         </Panel>
       </div>

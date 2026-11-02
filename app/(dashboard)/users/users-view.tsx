@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusRank } from "@/components/status-badge";
 import type { RoleOption, UserNote, UserRecord } from "@/lib/users";
 import { saveUser } from "./actions";
-import { USER_FIELD_LABELS, UserDialog, type UserEditor, type UserValues } from "./user-dialog";
+import { USER_FIELD_LABELS, USER_LIST_FIELDS, UserDialog, type UserEditor, type UserValues } from "./user-dialog";
 
 /*
  * Users table: the accounts that sign in (agent and agency sign-in is a
@@ -170,6 +170,7 @@ export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersV
           columns={columns}
           getRowId={({ user }) => user.id}
           unit={["user", "users"]}
+          saveAs="users"
           renderDetails={({ user }) => (
             <section className="max-w-2xl">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
@@ -178,6 +179,7 @@ export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersV
               <NoteList
                 notes={notes.filter((note) => note.userId === user.id)}
                 labels={USER_FIELD_LABELS}
+                lists={USER_LIST_FIELDS}
               />
             </section>
           )}

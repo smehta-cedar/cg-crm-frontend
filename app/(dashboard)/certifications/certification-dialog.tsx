@@ -86,7 +86,7 @@ type CertificationDialogProps = {
   carriers: CertifiableCarrier[];
   /** Saves the values; resolves with the errors to show instead of closing. */
   onSave: (values: CertificationValues) => Promise<CertificationError[]>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

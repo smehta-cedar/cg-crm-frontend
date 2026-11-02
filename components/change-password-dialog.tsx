@@ -23,7 +23,7 @@ const INITIAL_STATE: ChangePasswordState = { fieldErrors: {}, error: null, done:
 
 type ChangePasswordDialogProps = {
   open: boolean;
-  /** Runs for every close: Cancel, Escape, backdrop click, or Done. */
+  /** Runs for every close: Cancel or Done. */
   onClose: () => void;
 };
 

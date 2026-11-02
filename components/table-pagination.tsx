@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTablePreference } from "./preferences";
 
 /*
- * Shared client-side pagination for list and profile tables: default 5 rows,
- * with 10 and 20 options. The footer stays hidden while the list fits on one
- * default page.
+ * Shared client-side pagination for list and profile tables: 5, 10 and 20
+ * rows. A page's one main table starts at 10; tables among other panels
+ * (profiles, status sections) start at 5. A size the user picks is saved on
+ * their account and wins from then on. The footer stays hidden while the
+ * list fits in 5 rows.
  */
 
 export const TABLE_PAGE_SIZES = [5, 10, 20] as const;
@@ -25,14 +28,20 @@ type UseTablePaginationResult<T> = {
 };
 
 /**
- * Slices `items` into pages. Pass `resetKey` (e.g. the search query) so the
- * page jumps back to 0 when the filtered set changes under you.
+ * Slices `items` into pages. `saveAs` names the table the page size is saved
+ * under (see DataTable). Pass `resetKey` (e.g. the search query) so the page
+ * jumps back to 0 when the filtered set changes under you.
  */
 export function useTablePagination<T>(
   items: T[],
+  saveAs: string,
+  defaultPageSize: TablePageSize = 5,
   resetKey?: string | number,
 ): UseTablePaginationResult<T> {
-  const [pageSize, setPageSizeState] = useState<TablePageSize>(5);
+  const [saved, saveTable] = useTablePreference(saveAs);
+  // A saved size the picker no longer offers falls back to the default.
+  const savedSize = TABLE_PAGE_SIZES.find((size) => size === saved.pageSize);
+  const [pageSize, setPageSizeState] = useState<TablePageSize>(savedSize ?? defaultPageSize);
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -51,6 +60,7 @@ export function useTablePagination<T>(
     setPageSize: (size) => {
       setPageSizeState(size);
       setPage(0);
+      saveTable({ pageSize: size });
     },
     currentPage,
     pageCount,

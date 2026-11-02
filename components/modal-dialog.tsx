@@ -22,14 +22,18 @@ export function useModalDialog(open: boolean) {
 type ModalDialogProps = {
   dialogRef: RefObject<HTMLDialogElement | null>;
   labelledBy: string;
-  /** Runs for every close: Escape, backdrop click, or close(). */
+  /** Runs for every close(): the dialog's own buttons, or a save. */
   onClose: () => void;
   /** Width class. The default fits a form; a confirmation uses `max-w-md`. */
   className?: string;
   children: ReactNode;
 };
 
-/** Native modal dialog; clicking the backdrop closes it. */
+/**
+ * Native modal dialog. Only its own buttons close it: backdrop clicks do
+ * nothing and Escape is swallowed (keydown as well as cancel, since Chrome
+ * skips the cancel event on a repeated Escape).
+ */
 export function ModalDialog({
   dialogRef,
   labelledBy,
@@ -42,10 +46,9 @@ export function ModalDialog({
       ref={dialogRef}
       aria-labelledby={labelledBy}
       onClose={onClose}
-      // The content fills the dialog (p-0; the form owns the inset), so only
-      // backdrop clicks land here.
-      onClick={(event) => {
-        if (event.target === event.currentTarget) event.currentTarget.close();
+      onCancel={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") event.preventDefault();
       }}
       // Overflow lives in `className` so a short form can use overflow-visible
       // and let a dropdown paint past the dialog edge.
