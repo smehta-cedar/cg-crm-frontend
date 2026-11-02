@@ -38,6 +38,16 @@ export const AGENCY_FIELD_LABELS: Record<AgencyField, string> = {
   licenseDates: "Licence dates",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const AGENCY_LIST_FIELDS: readonly AgencyField[] = [
+  "aliases",
+  "licensedStates",
+  "licenseNumbers",
+  "licenseLines",
+  "licenseStatuses",
+  "licenseDates",
+];
+
 const FORM_LABELS: ProducerLabels = {
   name: "Agency name",
   aliases: "Other names",
@@ -50,7 +60,7 @@ type AgencyDialogProps = {
   editing: AgencyRecord | "new" | null;
   /** Saves the values; resolves with the error to show instead of closing. */
   onSave: (values: AgencyValues) => Promise<AgencyError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

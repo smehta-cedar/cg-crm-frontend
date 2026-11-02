@@ -287,6 +287,7 @@ export function HrView({ licenses: initialLicenses, today: serverToday }: HrView
           columns={columns}
           getRowId={(request) => request.id}
           unit={["request", "requests"]}
+          saveAs="requests"
           emptyMessage="No requests yet. File one with the + in the top bar."
         />
       </section>

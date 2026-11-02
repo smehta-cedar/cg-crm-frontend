@@ -68,6 +68,9 @@ export const APPOINTMENT_FIELD_LABELS: Record<CarrierContractField, string> = {
   appointedStates: "States",
 };
 
+/** The fields a note shows as lists, so an edit names only what was added or removed. */
+export const APPOINTMENT_LIST_FIELDS: readonly CarrierContractField[] = ["appointedStates"];
+
 /** The statuses a contract can have, in the order the dropdown lists them; the API's CONTRACT_STATUSES. */
 export const CONTRACT_STATUSES: readonly ContractStatus[] = ["active", "applied", "pending", "inactive"];
 
@@ -84,7 +87,7 @@ type AppointmentDialogProps = {
   requireWritingNumber?: boolean;
   /** Saves the values; resolves with an error to show instead of closing. */
   onSave: (values: AppointmentValues, editing?: CarrierContractRecord) => Promise<AppointmentError | null>;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
 };
 

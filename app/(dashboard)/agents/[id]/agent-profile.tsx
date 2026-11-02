@@ -45,7 +45,7 @@ import {
   licenseStatusesOf,
   type StateLicense,
 } from "@/lib/state-licenses";
-import { US_STATE_NAMES, US_STATES, writableStates } from "@/lib/us-states";
+import { US_STATE_NAMES, US_STATES, noWritableReason, unwritableReasons, writableStates } from "@/lib/us-states";
 import { byName } from "@/lib/text";
 import { AddPasswordDialog, type AddPasswordEditor } from "../../passwords/password-dialog";
 import { deleteCertification, listAgentCertifications, saveCertification } from "../../certifications/actions";
@@ -65,7 +65,7 @@ import {
 } from "../../certifications/certifications-table";
 import { AppointmentDialog } from "../../contracts/appointment-dialog";
 import { useAppointments } from "../../contracts/use-appointments";
-import { AGENT_FIELD_LABELS } from "../agent-dialog";
+import { AGENT_FIELD_LABELS, AGENT_LIST_FIELDS } from "../agent-dialog";
 
 /*
  * Profile for one agent: identity, then everything linked to them — the states
@@ -343,6 +343,7 @@ type PendingInput = {
   agent: AgentRecord;
   agentCarriers: (CarrierOption & {
     writable: string[];
+    unwritable: string;
     writingNumber: string;
     contract: Pick<CarrierContractRecord, "status">;
   })[];
@@ -380,7 +381,7 @@ function pendingItems({ agent, agentCarriers, passwords }: PendingInput): Pendin
       items.push({
         key: `states-${carrier.id}`,
         title: `Finish the ${carrier.name} contract`,
-        detail: "Appointed, but with no writable states yet.",
+        detail: `Appointed, but with no writable states yet. ${carrier.unwritable}`,
         href: "/contracts",
         linkLabel: "Contracts",
       });
@@ -496,7 +497,7 @@ export function AgentProfile({
   const [section, setSection] = useState<SectionKey | null>(null);
   // Carriers opens on its map (with the table under it); State licences on its table.
   const [carriersView, setCarriersView] = useState<PanelView>("map");
-  const [licencesView, setLicencesView] = useState<PanelView>("table");
+  const [licencesView, setLicencesView] = useState<PanelView>("map");
   // The carrier picked on the Carriers map's card: only its writable states light up.
   const [mapCarrierId, setMapCarrierId] = useState<string | null>(null);
   // Appointments added here are for this agent only.
@@ -525,6 +526,11 @@ export function AgentProfile({
             {
               ...carrier,
               writable: writableStates(contract.appointedStates, agent.licensedStates, carrier.availableStates),
+              // Why `writable` is empty; "" when it isn't.
+              unwritable: noWritableReason(contract.appointedStates, agent.licensedStates, carrier.availableStates, {
+                agent: agent.name,
+                carrier: carrier.name,
+              }),
               writingNumber: contract.writingNumber,
               contract,
             },
@@ -933,9 +939,17 @@ export function AgentProfile({
                             bucketOf: () => 0,
                             highlighted: mapCarrier.writable,
                             describeState: (code: string) =>
-                              `${US_STATE_NAMES[code] ?? code} · ${
-                                mapCarrier.writable.includes(code) ? "Writable" : "Not writable"
-                              } with ${mapCarrier.name} · ${licensedText(code)}`,
+                              mapCarrier.writable.includes(code)
+                                ? `${US_STATE_NAMES[code] ?? code} · Writable with ${mapCarrier.name} · ${licensedText(code)}`
+                                : `${US_STATE_NAMES[code] ?? code} · Not writable: ${
+                                    unwritableReasons(
+                                      [code],
+                                      mapCarrier.contract.appointedStates,
+                                      agent.licensedStates,
+                                      mapCarrier.availableStates,
+                                      { agent: agent.name, carrier: mapCarrier.name },
+                                    )[0]
+                                  }`,
                             legendTitle: mapCarrier.name,
                             legend: [
                               { bucket: "pick" as const, label: "Writable" },
@@ -973,6 +987,22 @@ export function AgentProfile({
                       renderPanelSubtitle={(code) => <LicenseNumber value={agent.licenseNumbers[code]} />}
                       renderPanel={(code) => {
                         const here = agentCarriers.filter((carrier) => carrier.writable.includes(code));
+                        const licensed = agent.licensedStates.includes(code);
+                        // The agent's other carriers and what keeps each out of this state.
+                        // Unlicensed, that is the one reason, so it shows once instead.
+                        const blocked = licensed
+                          ? agentCarriers.flatMap((carrier) =>
+                              carrier.writable.includes(code)
+                                ? []
+                                : unwritableReasons(
+                                    [code],
+                                    carrier.contract.appointedStates,
+                                    agent.licensedStates,
+                                    carrier.availableStates,
+                                    { agent: agent.name, carrier: carrier.name },
+                                  ).map((reason) => ({ id: carrier.id, reason })),
+                            )
+                          : [];
                         return (
                           <>
                             <p role="status" className="text-xs text-fg-muted">
@@ -1018,6 +1048,20 @@ export function AgentProfile({
                                 {agent.name} can&apos;t write in {US_STATE_NAMES[code] ?? code} with any carrier yet.
                               </p>
                             )}
+                            {!licensed ? (
+                              <p className="mt-3 text-sm text-fg-subtle">
+                                {agent.name} isn&apos;t licensed in {US_STATE_NAMES[code] ?? code}.
+                              </p>
+                            ) : blocked.length > 0 ? (
+                              <>
+                                <h4 className="mt-5 text-xs font-medium text-fg-muted">Not writable here</h4>
+                                <ul className="mt-1 space-y-1 text-sm text-fg-subtle">
+                                  {blocked.map(({ id, reason }) => (
+                                    <li key={id}>{reason}.</li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : null}
                           </>
                         );
                       }}
@@ -1027,6 +1071,7 @@ export function AgentProfile({
                     columns={["Action", ...CARRIER_COLUMNS]}
                     rows={agentCarriers}
                     rowKey={(carrier) => carrier.id}
+                    saveAs="agent.carriers"
                   >
                     {(carrier) => (
                       <>
@@ -1055,7 +1100,7 @@ export function AgentProfile({
                         <StateChipCell
                           codes={carrier.writable}
                           label={`States writable with ${carrier.name}`}
-                          empty="No states yet"
+                          empty={`None. ${carrier.unwritable}`}
                         />
                         <td className="px-3 py-2.5 align-middle">
                           <StatusBadge status={carrier.contract.status} />
@@ -1079,9 +1124,11 @@ export function AgentProfile({
                     counts={licenceCounts}
                     unit={["licence", "licences"]}
                     showCounts={false}
-                    bucketOf={(code) => {
-                      const license = licenceByState.get(code);
-                      return !license ? 0 : license.status === "active" ? 4 : 2;
+                    fillOf={(code) => {
+                      const status = licenceByState.get(code)?.status;
+                      if (!status) return undefined;
+                      if (status === "active") return "fill-map-active";
+                      return status === "expired" ? "fill-map-expired" : "fill-map-pending";
                     }}
                     describeState={(code) => {
                       const license = licenceByState.get(code);
@@ -1093,8 +1140,9 @@ export function AgentProfile({
                     }}
                     legendTitle="Licence"
                     legend={[
-                      { bucket: 4, label: "Active" },
-                      { bucket: 2, label: "Other status" },
+                      { swatch: "bg-map-active", label: "Active" },
+                      { swatch: "bg-map-pending", label: "Applied / Pending" },
+                      { swatch: "bg-map-expired", label: "Expired" },
                       { bucket: 0, label: "Not licensed" },
                     ]}
                     lineMarkers={(code) => licenceByState.get(code)}
@@ -1246,6 +1294,8 @@ export function AgentProfile({
                     <SitePasswordsTable
                       passwords={shownSitePasswords}
                       onEdit={editSitePassword}
+                      pageSize={5}
+                      saveAs="profile.site-passwords"
                     />
                   )}
                 </Panel>
@@ -1255,7 +1305,7 @@ export function AgentProfile({
             <Panel title="History" count={notes.length}>
               {/* Cancels NoteList's own top margin; the panel body already pads. */}
               <div className="-mt-2">
-                <HydratedNoteList notes={notes} labels={AGENT_FIELD_LABELS} />
+                <HydratedNoteList notes={notes} labels={AGENT_FIELD_LABELS} lists={AGENT_LIST_FIELDS} />
               </div>
             </Panel>
           ) : shown === null ? (

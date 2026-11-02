@@ -4,7 +4,26 @@
  * carries a token or a password.
  */
 
+import type { TablePageSize } from "@/components/table-pagination";
+import type { Theme } from "@/components/theme-provider";
 import type { PermissionAction, RolePermissions } from "@/lib/roles";
+
+/** One table's settings, saved under `table.<its saveAs name>`. */
+export type TablePreference = {
+  pageSize?: TablePageSize;
+  /** The sorted column, or null for the original order. */
+  sort?: { id: string; desc: boolean } | null;
+};
+
+/**
+ * The user's own screen settings, saved on their account so they follow them
+ * to any browser. A key that was never set means "the default".
+ */
+export type Preferences = {
+  theme?: Theme;
+  sidebarCollapsed?: boolean;
+  [table: `table.${string}`]: TablePreference | undefined;
+};
 
 /** A user as the API serialises them (UserSerializer). */
 export type ApiUser = {
@@ -26,6 +45,8 @@ export type ApiUser = {
    * Only GET /auth/me/ sends it (MeSerializer); user lists leave it out.
    */
   permissions?: RolePermissions;
+  /** Only GET /auth/me/ sends it; nobody else sees a user's settings. */
+  preferences?: Preferences;
 };
 
 export type SessionUser = {
@@ -41,6 +62,7 @@ export type SessionUser = {
   agentId: string | null;
   /** What the role lets them do, per module. A superuser has every module. */
   permissions: RolePermissions;
+  preferences: Preferences;
 };
 
 export function toSessionUser(user: ApiUser): SessionUser {
@@ -53,6 +75,7 @@ export function toSessionUser(user: ApiUser): SessionUser {
     isSuperuser: user.is_superuser,
     agentId: user.agent_id,
     permissions: user.permissions ?? {},
+    preferences: user.preferences ?? {},
   };
 }
 

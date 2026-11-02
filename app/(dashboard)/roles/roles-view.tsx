@@ -190,6 +190,7 @@ export function RolesView({ initialRoles, modules, users }: RolesViewProps) {
           columns={columns}
           getRowId={({ role }) => role.id}
           unit={["role", "roles"]}
+          saveAs="roles"
           renderDetails={({ role }) => (
             <RoleUsers users={users.filter((user) => user.roles.some((held) => held.id === role.id))} />
           )}

@@ -18,7 +18,7 @@ import type { CarrierRecord } from "@/lib/carriers";
 import { US_STATE_NAMES, US_STATES, stateSummary, writableStates } from "@/lib/us-states";
 import { licenceLinesText } from "@/lib/state-licenses";
 import { byName } from "@/lib/text";
-import { APPOINTMENT_FIELD_LABELS, AppointmentDialog } from "./appointment-dialog";
+import { APPOINTMENT_FIELD_LABELS, APPOINTMENT_LIST_FIELDS, AppointmentDialog } from "./appointment-dialog";
 import { useAppointments } from "./use-appointments";
 
 /*
@@ -735,6 +735,7 @@ export function ContractsView({
             columns={columns}
             getRowId={({ contract }) => contract.id}
             unit={["appointment", "appointments"]}
+            saveAs="contracts"
             renderDetails={({ contract, states }) => (
               <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
                 <section>
@@ -758,6 +759,7 @@ export function ContractsView({
                   <NoteList
                     notes={notes.filter((note) => note.contractId === contract.id)}
                     labels={APPOINTMENT_FIELD_LABELS}
+                    lists={APPOINTMENT_LIST_FIELDS}
                   />
                 </section>
               </div>

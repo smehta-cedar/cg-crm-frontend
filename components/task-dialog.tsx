@@ -37,7 +37,7 @@ import { US_STATES } from "@/lib/us-states";
 
 type TaskDialogProps = {
   open: boolean;
-  /** Runs for every close: Cancel, Escape, backdrop click, or a save. */
+  /** Runs for every close: Cancel or a save. */
   onClose: () => void;
   /** The task being edited; left out to add a new one. */
   task?: TaskRecord | null;

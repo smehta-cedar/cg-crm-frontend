@@ -18,7 +18,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { apiRequest, type TokenPair } from "@/lib/api";
+import { apiFetch } from "@/lib/api-server";
 import { ACCESS_COOKIE, clearAuthCookies, setAuthCookies } from "@/lib/auth-cookies";
+import type { Preferences } from "@/lib/auth-user";
 
 export type ChangePasswordField = "currentPassword" | "newPassword" | "confirmPassword";
 
@@ -98,4 +100,13 @@ export async function changePassword(
   // The API revoked the old tokens; keep this session signed in with the new pair.
   setAuthCookies(cookieStore, result.data);
   return { ...NO_ERRORS, done: true };
+}
+
+/**
+ * Remember a screen setting on the signed-in user's account. PATCH /auth/me/
+ * merges the keys sent into the saved ones. If it fails, the change still
+ * shows on screen; it just isn't remembered.
+ */
+export async function savePreferences(preferences: Preferences): Promise<void> {
+  await apiFetch("/auth/me/", { method: "PATCH", body: { preferences } });
 }

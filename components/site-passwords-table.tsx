@@ -9,6 +9,7 @@ import { DeleteIcon } from "@/components/delete-icon";
 import { EditIcon } from "@/components/edit-icon";
 import { withPasswordWidths } from "@/components/passwords-table";
 import { StatusBadge, statusRank } from "@/components/status-badge";
+import type { TablePageSize } from "@/components/table-pagination";
 import type { SitePasswordRecord } from "@/lib/site-passwords";
 
 /*
@@ -63,9 +64,21 @@ type SitePasswordsTableProps = {
   emptyMessage?: ReactNode;
   /** The carrier table's fixed column widths, so the two line up. */
   aligned?: boolean;
+  /** Starting rows per page; DataTable's 10 unless set (5 on profiles). */
+  pageSize?: TablePageSize;
+  /** Name the user's sort and rows per page are saved under (DataTable). */
+  saveAs: string;
 };
 
-export function SitePasswordsTable({ passwords, onEdit, onDelete, emptyMessage, aligned = false }: SitePasswordsTableProps) {
+export function SitePasswordsTable({
+  passwords,
+  onEdit,
+  onDelete,
+  emptyMessage,
+  aligned = false,
+  pageSize,
+  saveAs,
+}: SitePasswordsTableProps) {
   const columns = useMemo<DataTableColumn<SitePasswordRecord>[]>(() => {
     const columns: DataTableColumn<SitePasswordRecord>[] = [
       ...(onEdit || onDelete
@@ -163,6 +176,8 @@ export function SitePasswordsTable({ passwords, onEdit, onDelete, emptyMessage, 
       getRowId={(password) => password.id}
       unit={["site password", "site passwords"]}
       emptyMessage={emptyMessage}
+      pageSize={pageSize}
+      saveAs={saveAs}
     />
   );
 }

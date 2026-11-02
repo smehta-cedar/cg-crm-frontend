@@ -98,3 +98,45 @@ export function writableStates(
 ): string[] {
   return intersectStates(appointedStates, licensedStates, availableStates);
 }
+
+/** One state by name, several by code: "Texas", "TX, FL". */
+function stateList(codes: string[]) {
+  return codes.length === 1 ? (US_STATE_NAMES[codes[0]] ?? codes[0]) : codes.join(", ");
+}
+
+/**
+ * Why writableStates leaves `codes` out, one reason per ceiling, in the
+ * Appointment dialog's words; empty when they are all writable. The carrier's
+ * footprint is checked first, then the licence, then the appointment, so a
+ * state missing from several is named once, at the one to fix first.
+ */
+export function unwritableReasons(
+  codes: string[],
+  appointedStates: string[],
+  licensedStates: string[],
+  availableStates: string[],
+  names: { agent: string; carrier: string },
+): string[] {
+  const unavailable = codes.filter((code) => !availableStates.includes(code));
+  const unlicensed = codes.filter((code) => !unavailable.includes(code) && !licensedStates.includes(code));
+  const unlisted = codes.filter(
+    (code) => !unavailable.includes(code) && !unlicensed.includes(code) && !appointedStates.includes(code),
+  );
+  return [
+    unavailable.length > 0 ? `${names.carrier} isn't available in ${stateList(unavailable)}` : "",
+    unlicensed.length > 0 ? `${names.agent} isn't licensed in ${stateList(unlicensed)}` : "",
+    unlisted.length > 0 ? `The ${names.carrier} contract doesn't list ${stateList(unlisted)}` : "",
+  ].filter(Boolean);
+}
+
+/** Why an appointment writes nowhere, as a sentence or two; "" when it writes somewhere. */
+export function noWritableReason(
+  appointedStates: string[],
+  licensedStates: string[],
+  availableStates: string[],
+  names: { agent: string; carrier: string },
+): string {
+  if (appointedStates.length === 0) return `The ${names.carrier} contract lists no states.`;
+  if (writableStates(appointedStates, licensedStates, availableStates).length > 0) return "";
+  return `${unwritableReasons(appointedStates, appointedStates, licensedStates, availableStates, names).join(". ")}.`;
+}
