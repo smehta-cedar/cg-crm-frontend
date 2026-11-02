@@ -1246,6 +1246,7 @@ export function AgentProfile({
                     <SitePasswordsTable
                       passwords={shownSitePasswords}
                       onEdit={editSitePassword}
+                      pageSize={5}
                     />
                   )}
                 </Panel>

@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteIcon } from "@/components/delete-icon";
 import { EditIcon } from "@/components/edit-icon";
 import { StatusBadge, statusRank } from "@/components/status-badge";
+import type { TablePageSize } from "@/components/table-pagination";
 import type { PasswordRecord } from "@/lib/passwords";
 
 /*
@@ -42,6 +43,8 @@ type PasswordsTableProps = {
   emptyMessage?: ReactNode;
   /** Fixed column widths shared with SitePasswordsTable, so the two line up (the Passwords page). */
   aligned?: boolean;
+  /** Starting rows per page; DataTable's 10 unless set (5 on profiles). */
+  pageSize?: TablePageSize;
 };
 
 /**
@@ -84,6 +87,7 @@ export function PasswordsTable({
   onDelete,
   emptyMessage,
   aligned = false,
+  pageSize,
 }: PasswordsTableProps) {
   const columns = useMemo<DataTableColumn<PasswordRecord>[]>(() => {
     const name = (text: string, href: string) =>
@@ -209,6 +213,7 @@ export function PasswordsTable({
       getRowId={(password) => password.id}
       unit={["password", "passwords"]}
       emptyMessage={emptyMessage}
+      pageSize={pageSize}
     />
   );
 }

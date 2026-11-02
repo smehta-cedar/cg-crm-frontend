@@ -401,6 +401,7 @@ export function PasswordsPanel({
           linkParties={linkParties}
           onEdit={onEdit}
           onDelete={onDelete}
+          pageSize={5}
         />
       )}
     </Panel>

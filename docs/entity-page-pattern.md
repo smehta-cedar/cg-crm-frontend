@@ -173,10 +173,11 @@ A column: `{ id, header, cell(row, ctx), className?, sortValue?, searchText?, sr
   password column `searchText` or `sortValue`.
 - **Count:** above the table on the right, `aria-live="polite"`: "12 agents", or
   "3 of 12 agents" while searching.
-- **Pagination:** client-side, under the table (`table-pagination.tsx`). Default
-  5 rows; Show select for 5 / 10 / 20; range text and ‹ ›. Hidden while the
-  filtered list fits in 5 or fewer. Resets to page 1 when the search changes.
-  `ProfileTable` on profiles uses the same control.
+- **Pagination:** client-side, under the table (`table-pagination.tsx`). Show
+  select for 5 / 10 / 20; range text and ‹ ›. A page's main `DataTable` starts
+  at 10 rows; tables inside profile panels start at 5 (`ProfileTable`, and
+  `pageSize={5}` on the password tables there). Hidden while the filtered list
+  fits in 5 or fewer. Resets to page 1 when the search changes.
 - **No match:** one row, "No agents match “foo”." with a Clear search button (drops `?q=`, which
   also empties the navbar box).
   `EmptyState` is still used by the view when the list itself is empty.

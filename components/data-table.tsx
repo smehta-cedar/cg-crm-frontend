@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
 import { Fragment, useEffect, useId, useMemo, useState, type ReactNode } from "react";
-import { TablePagination, useTablePagination } from "@/components/table-pagination";
+import { TablePagination, useTablePagination, type TablePageSize } from "@/components/table-pagination";
 import { SEARCH_PARAM, searchWords } from "@/lib/search";
 
 /*
@@ -23,7 +23,8 @@ import { SEARCH_PARAM, searchWords } from "@/lib/search";
  * navbar search narrows rows. TanStack Table (v9) only sorts and filters;
  * this component owns the markup (docs/entity-page-pattern.md §6–7), so cells
  * stay free to render links, badges, credential buttons and Edit. Client-side
- * pagination (5 / 10 / 20) sits under the table via `table-pagination`.
+ * pagination (5 / 10 / 20, starting at 10) sits under the table via
+ * `table-pagination`.
  *
  * There is no search box here: the navbar search (components/navbar-search.tsx)
  * writes `?q=`, and the table filters on whatever that holds.
@@ -71,6 +72,8 @@ type DataTableProps<T extends RowData> = {
   renderDetails?: (row: T) => ReactNode;
   /** Shown as one table row when `rows` is empty (not when a search hides everything). */
   emptyMessage?: ReactNode;
+  /** Starting rows per page: 10 as a page's main table, 5 inside a profile panel. */
+  pageSize?: TablePageSize;
 };
 
 const SEARCH_COLUMN_ID = "__search";
@@ -106,6 +109,7 @@ export function DataTable<T extends RowData>({
   unit,
   renderDetails,
   emptyMessage,
+  pageSize: defaultPageSize = 10,
 }: DataTableProps<T>) {
   const id = useId();
   const fixedLayout = columns.some((column) => column.width);
@@ -157,7 +161,7 @@ export function DataTable<T extends RowData>({
     currentPage,
     pageCount,
     setPage,
-  } = useTablePagination(visibleRows, query);
+  } = useTablePagination(visibleRows, query, defaultPageSize);
 
   const toggleExpanded = (rowId: string) =>
     setExpandedIds((current) => {

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 
 /*
- * Shared client-side pagination for list and profile tables: default 5 rows,
- * with 10 and 20 options. The footer stays hidden while the list fits on one
- * default page.
+ * Shared client-side pagination for list and profile tables: 5, 10 and 20
+ * rows. A page's one main table starts at 10; tables among other panels
+ * (profiles, status sections) start at 5. The footer stays hidden while the
+ * list fits in 5 rows.
  */
 
 export const TABLE_PAGE_SIZES = [5, 10, 20] as const;
@@ -31,8 +32,9 @@ type UseTablePaginationResult<T> = {
 export function useTablePagination<T>(
   items: T[],
   resetKey?: string | number,
+  defaultPageSize: TablePageSize = 5,
 ): UseTablePaginationResult<T> {
-  const [pageSize, setPageSizeState] = useState<TablePageSize>(5);
+  const [pageSize, setPageSizeState] = useState<TablePageSize>(defaultPageSize);
   const [page, setPage] = useState(0);
 
   useEffect(() => {
