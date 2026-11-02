@@ -51,12 +51,30 @@ function rotate(refresh: string): Promise<Rotation> {
   return promise;
 }
 
+/** Public marketing pages other than home; the admin subdomain does not serve them. */
+const MARKETING_PATHS = new Set(["/careers", "/team"]);
+
+/** The admin subdomain is the CRM only; the main domain keeps the landing page at /. */
+function isAdminHost(request: NextRequest): boolean {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+  return host.startsWith("admin.");
+}
+
 export async function proxy(request: NextRequest) {
+  const admin = isAdminHost(request);
+  const { pathname } = request.nextUrl;
+
+  if (admin && MARKETING_PATHS.has(pathname)) return NextResponse.redirect(new URL("/", request.url));
+
+  // admin.<domain>/ renders /login while the address bar keeps showing /.
+  const pass = (init?: Parameters<typeof NextResponse.next>[0]) =>
+    admin && pathname === "/" ? NextResponse.rewrite(new URL("/login", request.url), init) : NextResponse.next(init);
+
   const access = request.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = request.cookies.get(REFRESH_COOKIE)?.value;
 
   const fresh = access !== undefined && !jwtExpiresWithin(access, REFRESH_AHEAD_MS);
-  if (fresh || !refresh) return NextResponse.next();
+  if (fresh || !refresh) return pass();
 
   const rotation = await rotate(refresh);
 
@@ -64,7 +82,7 @@ export async function proxy(request: NextRequest) {
     // The forwarded request carries the new cookies, so cookies() downstream reads them.
     request.cookies.set(ACCESS_COOKIE, rotation.tokens.access);
     request.cookies.set(REFRESH_COOKIE, rotation.tokens.refresh);
-    const response = NextResponse.next({ request });
+    const response = pass({ request });
     setAuthCookies(response.cookies, rotation.tokens);
     return response;
   }
@@ -72,12 +90,12 @@ export async function proxy(request: NextRequest) {
   if (rotation.definite) {
     request.cookies.delete(ACCESS_COOKIE);
     request.cookies.delete(REFRESH_COOKIE);
-    const response = NextResponse.next({ request });
+    const response = pass({ request });
     clearAuthCookies(response.cookies);
     return response;
   }
 
-  return NextResponse.next();
+  return pass();
 }
 
 export const config = {
