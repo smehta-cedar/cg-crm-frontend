@@ -1335,6 +1335,7 @@ export function AgentProfile({
         carriers={certificationCarriers}
         onSave={saveAgentCertification}
         onClose={() => setCertificationEditor(null)}
+        selfEdit={selfEdit}
       />
 
       <AgentLicenseDialog

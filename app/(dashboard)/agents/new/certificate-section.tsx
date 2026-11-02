@@ -42,6 +42,8 @@ type CertificateSectionProps = {
    * message to keep the row. Omit it on Add, where the row is only local.
    */
   onRemove?: (draft: CertificateDraft) => Promise<string | null>;
+  /** An agent editing their own profile: only staff set Verified. */
+  selfEdit?: boolean;
 };
 
 type Entry = {
@@ -74,7 +76,14 @@ function draftLabel(draft: CertificateDraft): string {
   return [draft.carrierName, draft.lineOfBusiness].filter(Boolean).join(" ") || "untitled";
 }
 
-export function CertificateSection({ idPrefix, carriers, drafts, onChange, onRemove }: CertificateSectionProps) {
+export function CertificateSection({
+  idPrefix,
+  carriers,
+  drafts,
+  onChange,
+  onRemove,
+  selfEdit,
+}: CertificateSectionProps) {
   const [entryOpen, setEntryOpen] = useState(false);
   const [entry, setEntry] = useState<Entry>(EMPTY_ENTRY);
   const [held, setHeld] = useState<CertificateDraft | null>(null);
@@ -390,7 +399,8 @@ export function CertificateSection({ idPrefix, carriers, drafts, onChange, onRem
                   type="checkbox"
                   checked={entry.isVerified}
                   onChange={(event) => update({ isVerified: event.target.checked })}
-                  className="size-4 accent-brand-strong"
+                  disabled={selfEdit}
+                  className="size-4 accent-brand-strong disabled:cursor-not-allowed"
                 />
                 Verified
               </label>

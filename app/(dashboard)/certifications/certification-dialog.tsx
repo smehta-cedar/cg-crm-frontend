@@ -88,6 +88,8 @@ type CertificationDialogProps = {
   onSave: (values: CertificationValues) => Promise<CertificationError[]>;
   /** Runs for every close: Cancel or a save. */
   onClose: () => void;
+  /** An agent editing their own profile: only staff set Verified. */
+  selfEdit?: boolean;
 };
 
 export function CertificationDialog({ editor, onClose, ...formProps }: CertificationDialogProps) {
@@ -109,7 +111,7 @@ type CertificationFormProps = Omit<CertificationDialogProps, "editor" | "onClose
 };
 
 /** The dialog's form. Mounted per open, so its errors and fields start fresh each time. */
-function CertificationForm({ id, editor, agent, carriers, onSave, close }: CertificationFormProps) {
+function CertificationForm({ id, editor, agent, carriers, onSave, close, selfEdit }: CertificationFormProps) {
   const editing = editor.mode === "edit" ? editor.certification : undefined;
   const [errors, setErrors] = useState<CertificationError[]>([]);
   const [saving, setSaving] = useState(false);
@@ -151,7 +153,8 @@ function CertificationForm({ id, editor, agent, carriers, onSave, close }: Certi
       dueDate: String(data.get("dueDate") ?? ""),
       startDate: String(data.get("startDate") ?? ""),
       endDate: String(data.get("endDate") ?? ""),
-      isVerified: data.get("isVerified") === "yes",
+      // A disabled checkbox isn't submitted, so self-edit sends the stored value back.
+      isVerified: selfEdit ? (editing?.isVerified ?? false) : data.get("isVerified") === "yes",
       file,
       status: String(data.get("status")) === "inactive" ? "inactive" : "active",
     };
@@ -280,7 +283,8 @@ function CertificationForm({ id, editor, agent, carriers, onSave, close }: Certi
               name="isVerified"
               value="yes"
               defaultChecked={editing?.isVerified ?? false}
-              className="size-4 accent-brand-strong"
+              disabled={selfEdit}
+              className="size-4 accent-brand-strong disabled:cursor-not-allowed"
             />
             Verified
           </label>

@@ -157,6 +157,7 @@ export function AgentFormPage({
               carriers={carriers}
               drafts={certificates}
               onChange={setCertificates}
+              selfEdit={selfEdit}
               onRemove={async (draft) => {
                 if (!baseline.current.has(draft.id)) return null;
                 const removed = await deleteCertification(draft.id);
