@@ -29,7 +29,7 @@ import type {
  * The view passes `onSave` and `onDelete`, which call the server actions
  * (./actions.ts) and update its own state. Delete asks once more inside the
  * dialog before it runs; the API refuses it while any user holds the role.
- * A built-in role (Admin, Operations, Agent) keeps its name and stays active,
+ * A built-in role (Admin, Operations, Agent, SDR) keeps its name and stays active,
  * and has no Delete. While a save or delete is in flight the buttons are
  * disabled.
  */

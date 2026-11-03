@@ -42,6 +42,16 @@ export function yearMonthOf(date: string): YearMonth {
 /** "September 2026". */
 export const monthLabel = ({ year, month }: YearMonth) => `${MONTH_NAMES[month - 1]} ${year}`;
 
+const WEEKDAY_LONG_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Tuesday, November 3, 2026" from "2026-11-03", worked out in UTC so every timezone agrees. */
+export function longDateLabel(date: string) {
+  const { year, month } = yearMonthOf(date);
+  const day = Number(date.slice(8, 10));
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return `${WEEKDAY_LONG_NAMES[weekday]}, ${MONTH_NAMES[month - 1]} ${day}, ${year}`;
+}
+
 /** "2026-09", for keys and `<time dateTime>`. */
 export const monthKey = ({ year, month }: YearMonth) => `${year}-${pad(month)}`;
 

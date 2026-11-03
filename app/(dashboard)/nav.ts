@@ -70,6 +70,17 @@ const NAV_ITEMS: NavItem[] = [
   },
   // UI mock only: sale form shell. No module gate so every signed-in user can open it.
   { href: "/sold", label: "Sold", icon: "sold" },
+  // Appointment-setter click tracker: the Click panel is where the SDR role
+  // logs calls; History is the daily/month view.
+  {
+    href: "/tracker",
+    label: "Tracker",
+    listLabel: "Click panel",
+    listIcon: "tracker",
+    icon: "tracker",
+    listModule: "tracker.clicks",
+    children: [{ href: "/tracker/history", label: "History", icon: "list", module: "tracker.history" }],
+  },
   // Requests and the calendar they land on.
   { href: "/hr", label: "Calendar", icon: "hr", module: "requests" },
   { href: "/tasks", label: "Tasks", icon: "tasks", module: "tasks" },
