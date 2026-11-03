@@ -48,7 +48,7 @@ Shared pieces (extracted when Carriers landed — use these, don't copy):
 | `lib/text.ts` | `byName` (sort comparator), `initials("Maria Alva") → "MA"` — the only copies |
 | `components/unsaved-banner.tsx` | `UnsavedBanner({ count, className? })` (§9) |
 | `components/hydrated-note-list.tsx` | `HydratedNoteList` — `NoteList` gated on hydration, for a profile's Notes panel |
-| `components/credential-value.tsx` | `CredentialValue` (copy-on-click, masked when `secret`), `PasswordInput` (eye toggle) — Passwords, Users, sign-in, profiles |
+| `components/credential-value.tsx` | `CredentialValue` (copy-on-click, masked when `secret`), `PortalPasswordValue` (portal passwords: the eye or a copy fetches the one password, shown for 10 seconds), `PasswordInput` (eye toggle) — Passwords, Users, sign-in, profiles |
 | `components/license-number.tsx` | `LicenseNumber` (a licensed-state card's number, click to copy, or "No number yet"; agent and agency profiles) |
 | `components/producer-form.tsx` | `ProducerForm` — the one agent/agency form (see Agency). Fields grouped into three titled sections with no help text (it is an internal form; the one hint is "Separate by comma." under the aliases): Identity (name, NPN, aliases on one line; the status select in the header), Contact (email, phone, then the producer's `extra` fields), Licences (an entry row — state dropdown, licence number, with `dates` a start and an end date, with `lines` Health and Life checkboxes, and an Add button — over the list of licences added, each with Edit and Remove; the list is what submits). `layout="dialog"` stacks them under rules in a modal; `layout="page"` (Add agent) lays them out as one card per row capped at the 2xl breakpoint, the Contact fields over four columns from `xl` (`FieldSpans`) with a sticky button bar. The licence entry row is one line in both layouts; required fields carry a red star (`Field required`) and nothing says "(optional)" |
 | `components/state-select.tsx` | `StateSelect` — searchable one-state combobox (type a name or code, pick from the list); submits the code through a hidden input under `name`. The agent address's State field |
@@ -471,8 +471,12 @@ Same pattern as Carriers; the differences:
   `"form"`. The API keeps one password per agent at each carrier (error under
   Carrier, naming both), rejects a blank password, and records the notes with
   the password redacted; `getPasswordNotes(passwordId)` reads them, though no
-  page shows them yet. The carrier filter, hidden-record notice and copy /
-  reveal behaviour are unchanged.
+  page shows them yet. The carrier filter and hidden-record notice are
+  unchanged. Lists carry only `hasPassword`: each row's eye or copy calls
+  `revealPassword` / `revealSitePassword`, the only read that returns the
+  portal password, which the API notes as `"viewed"`. A shown password hides
+  again after 10 seconds. The edit form starts the password empty (the mask
+  as placeholder when one is set) and a blank one keeps the current password.
 - Both list pages number rows 1…n by name (`rowNumbers`); Agents dropped
   the unsaved banner.
 - Seed files, no longer imported: `data/agents.json`,

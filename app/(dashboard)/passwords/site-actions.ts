@@ -9,7 +9,10 @@
  * show the change.
  *
  *   POST /sites/create/            PATCH /sites/{id}/
- *   POST /site-passwords/create/   PATCH / DELETE /site-passwords/{id}/
+ *   POST /site-passwords/create/   GET / PATCH / DELETE /site-passwords/{id}/
+ *
+ * The GET is the only read that returns the portal password (the show and
+ * copy buttons); the API notes each one as a view.
  *
  * The API keeps site names unique whatever their case, one site password
  * per agent (and one for the agency) at each site, and lets a username and
@@ -25,6 +28,7 @@ import {
   toSiteRecord,
   type ApiSite,
   type ApiSitePassword,
+  type ApiSitePasswordDetail,
   type SiteError,
   type SitePasswordError,
   type SitePasswordRecord,
@@ -81,7 +85,8 @@ export async function saveSitePassword(
     agency_id: values.agencyId,
     site_id: values.siteId,
     username: values.username,
-    portal_password: values.portalPassword,
+    // Left blank on an edit, the current password stays.
+    ...(editingId && values.portalPassword === "" ? {} : { portal_password: values.portalPassword }),
     status: values.status,
   };
   const result = editingId
@@ -90,6 +95,16 @@ export async function saveSitePassword(
   if (!result.ok) return { ok: false, errors: errorsOf(result, SITE_PASSWORD_ERROR_FIELDS) };
   revalidatePath("/", "layout");
   return { ok: true, password: toSitePasswordRecord(result.data) };
+}
+
+/** One site password's portal password, for the show and copy buttons; null when it can't be read. */
+export async function revealSitePassword(id: string): Promise<string | null> {
+  const result = await apiFetch<ApiSitePasswordDetail>(`/site-passwords/${encodeURIComponent(id)}/`);
+  if (!result.ok) {
+    if (result.status === 401) redirect("/login");
+    return null;
+  }
+  return result.data.portal_password;
 }
 
 /** Removes a site password. The API soft-deletes it, so the pair is free again. */

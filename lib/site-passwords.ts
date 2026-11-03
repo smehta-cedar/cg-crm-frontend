@@ -13,11 +13,12 @@ import "server-only";
  * password in lib/passwords.ts: one per agent at each site, and one for the
  * agency. Both live in the Passwords module (same permission); there is no
  * Sites page or list of their own. While a password's status is pending its
- * username and password may be blank. The portal password reaches the browser in the
- * page's props, like a carrier password's, never the search index.
+ * username and password may be blank. Like a carrier password, lists carry
+ * only whether a portal password is set; revealSitePassword
+ * (app/(dashboard)/passwords/site-actions.ts) fetches one at a time.
  */
 
-import { ApiError, apiFetch, apiGetAll } from "@/lib/api-server";
+import { apiGetAll } from "@/lib/api-server";
 import type { PasswordStatus } from "@/lib/passwords";
 
 export type SiteRecord = {
@@ -49,15 +50,20 @@ export type SitePasswordRecord = {
   siteLink: string;
   /** Blank only while the status is pending. */
   username: string;
-  /** Exactly as entered (not trimmed). */
-  portalPassword: string;
+  /** Whether a portal password is set. The password itself is never in a list. */
+  hasPassword: boolean;
   status: PasswordStatus;
 };
 
 /** Site password fields the form submits. */
-export type SitePasswordField = Exclude<keyof SitePasswordRecord, "id" | "agentName" | "siteName" | "siteLink">;
+export type SitePasswordField =
+  | Exclude<keyof SitePasswordRecord, "id" | "agentName" | "siteName" | "siteLink" | "hasPassword">
+  | "portalPassword";
 
-export type SitePasswordValues = Pick<SitePasswordRecord, SitePasswordField>;
+/** The portal password exactly as typed (not trimmed); left blank on an edit, the current one stays. */
+export type SitePasswordValues = Pick<SitePasswordRecord, Exclude<SitePasswordField, "portalPassword">> & {
+  portalPassword: string;
+};
 
 export type SitePasswordError = { field: SitePasswordField | "form"; message: string };
 
@@ -72,9 +78,12 @@ export type ApiSitePassword = {
   agency: { id: string; name: string; is_active: boolean } | null;
   site: { id: string; name: string; link: string };
   username: string;
-  portal_password: string;
+  has_password: boolean;
   status: string;
 };
+
+/** One site password with its portal password (SitePasswordDetailSerializer). */
+export type ApiSitePasswordDetail = ApiSitePassword & { portal_password: string };
 
 const STATUSES: readonly string[] = ["active", "pending", "inactive"] satisfies PasswordStatus[];
 
@@ -93,7 +102,7 @@ export function toSitePasswordRecord(password: ApiSitePassword): SitePasswordRec
     siteName: password.site.name,
     siteLink: password.site.link ?? "",
     username: password.username,
-    portalPassword: password.portal_password,
+    hasPassword: password.has_password,
     status: STATUSES.includes(password.status) ? (password.status as PasswordStatus) : "active",
   };
 }
@@ -106,14 +115,4 @@ export async function getSites(): Promise<SiteRecord[]> {
 /** Every site password, by agent name then site name. */
 export async function getSitePasswords(): Promise<SitePasswordRecord[]> {
   return (await apiGetAll<ApiSitePassword>("/site-passwords/")).map(toSitePasswordRecord);
-}
-
-/** One site password, or null when there is no such password. */
-export async function getSitePassword(id: string): Promise<SitePasswordRecord | null> {
-  const result = await apiFetch<ApiSitePassword>(`/site-passwords/${encodeURIComponent(id)}/`);
-  if (!result.ok) {
-    if (result.status === 404) return null;
-    throw new ApiError(`/site-passwords/${id}/`, result);
-  }
-  return toSitePasswordRecord(result.data);
 }

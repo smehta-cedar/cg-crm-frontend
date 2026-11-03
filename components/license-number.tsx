@@ -14,8 +14,12 @@ type CopyStatus = "idle" | "copied" | "failed";
 const ICON_BUTTON_CLASS =
   "cursor-pointer rounded-md p-1 text-fg-subtle hover:bg-surface-hover hover:text-fg";
 
-/** Copies `value` exactly as given; the status resets to idle after 1.5 seconds. */
-export function useCopy(value: string) {
+/**
+ * Copies `value` exactly as given; the status resets to idle after 1.5
+ * seconds. `value` can instead fetch the text, for a password the page
+ * doesn't hold: a rejection reads as "Couldn't copy".
+ */
+export function useCopy(value: string | (() => Promise<string>)) {
   const [status, setStatus] = useState<CopyStatus>("idle");
 
   useEffect(() => {
@@ -28,7 +32,8 @@ export function useCopy(value: string) {
     try {
       // Missing outside secure contexts (e.g. plain http on a LAN address).
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
-      await navigator.clipboard.writeText(value);
+      if (typeof value === "string") await navigator.clipboard.writeText(value);
+      else await copyPending(value());
       setStatus("copied");
     } catch {
       setStatus("failed");
@@ -36,6 +41,24 @@ export function useCopy(value: string) {
   };
 
   return { status, copy };
+}
+
+/**
+ * Copies text that is still on its way. Safari allows a copy only during the
+ * click itself, so it gets a ClipboardItem holding the pending text; a browser
+ * that refuses that gets writeText once the text arrives.
+ */
+async function copyPending(text: Promise<string>) {
+  if (typeof ClipboardItem !== "undefined") {
+    try {
+      const blob = text.then((value) => new Blob([value], { type: "text/plain" }));
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": blob })]);
+      return;
+    } catch {
+      // Falls through, e.g. where ClipboardItem takes only a ready Blob.
+    }
+  }
+  await navigator.clipboard.writeText(await text);
 }
 
 /** The icon button and its floating result. `onCopy` is the shared `useCopy` action. */

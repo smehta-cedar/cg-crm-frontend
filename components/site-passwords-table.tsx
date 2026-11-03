@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
+import { revealSitePassword } from "@/app/(dashboard)/passwords/site-actions";
 import { ROW_BUTTON_CLASS } from "@/components/classes";
-import { CredentialValue } from "@/components/credential-value";
+import { CredentialValue, PortalPasswordValue } from "@/components/credential-value";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteIcon } from "@/components/delete-icon";
 import { EditIcon } from "@/components/edit-icon";
@@ -155,7 +156,9 @@ export function SitePasswordsTable({
       {
         id: "password",
         header: "Password",
-        cell: (password) => <CredentialValue value={password.portalPassword} label="password" secret />,
+        cell: (password) => (
+          <PortalPasswordValue hasPassword={password.hasPassword} reveal={() => revealSitePassword(password.id)} />
+        ),
         className: "text-fg-muted",
       },
       {

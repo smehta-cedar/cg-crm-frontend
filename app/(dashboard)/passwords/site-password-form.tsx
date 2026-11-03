@@ -3,7 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { GHOST_BUTTON_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS, TOOLBAR_INPUT_CLASS } from "@/components/classes";
-import { PasswordInput } from "@/components/credential-value";
+import { MASK, PasswordInput } from "@/components/credential-value";
 import { Field } from "@/components/field";
 import { PageHeader } from "@/components/page-header";
 import { FormSection } from "@/components/producer-form";
@@ -124,7 +124,9 @@ export function SitePasswordFormPage({
       status: status === "pending" || status === "inactive" ? status : "active",
     };
     // Required unless pending, and spaces alone don't count. A valid password is still saved as typed.
-    if (values.status !== "pending" && values.portalPassword.trim() === "") {
+    // Left blank on an edit with a password already set, the current one stays.
+    const keepsCurrent = editing?.hasPassword && values.portalPassword === "";
+    if (values.status !== "pending" && !keepsCurrent && values.portalPassword.trim() === "") {
       setErrors([{ field: "portalPassword", message: "Password can't be blank." }]);
       return;
     }
@@ -308,7 +310,7 @@ export function SitePasswordFormPage({
             </Field>
             <Field
               label="Portal password"
-              required={!pending}
+              required={!pending && !editing?.hasPassword}
               htmlFor={`${id}-password`}
               hint={passwordError ?? undefined}
               hintId={`${id}-password-error`}
@@ -319,10 +321,10 @@ export function SitePasswordFormPage({
               <PasswordInput
                 id={`${id}-password`}
                 name="portalPassword"
-                required={!pending}
+                required={!pending && !editing?.hasPassword}
                 autoComplete="new-password"
                 spellCheck={false}
-                defaultValue={editing?.portalPassword}
+                placeholder={editing?.hasPassword ? MASK : undefined}
                 aria-invalid={passwordError ? true : undefined}
                 aria-describedby={passwordError ? `${id}-password-error` : undefined}
                 onChange={() => clear("portalPassword")}

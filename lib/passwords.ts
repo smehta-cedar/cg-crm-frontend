@@ -13,10 +13,10 @@ import "server-only";
  * carrier contract in lib/carrier-contracts.ts.
  *
  * Distinct from app/login (sign-in to this app). Passwords are carrier
- * portal credentials stored in the dashboard. The API returns the portal
- * password with each record, because the page shows and copies it; only a
- * role with the `passwords` module can read it, and it reaches the browser
- * in the page's props (never the search index).
+ * portal credentials stored in the dashboard. Lists carry only whether a
+ * portal password is set; the show and copy buttons fetch one at a time
+ * through revealPassword (app/(dashboard)/passwords/actions.ts), and the API
+ * notes each fetch as a view.
  *
  * Logins that aren't at a carrier are site passwords, in
  * lib/site-passwords.ts.
@@ -26,7 +26,7 @@ import "server-only";
  */
 
 import type { AgentRecord } from "@/lib/agents";
-import { ApiError, apiFetch, apiGet, apiGetAll } from "@/lib/api-server";
+import { apiGet, apiGetAll } from "@/lib/api-server";
 import type { CarrierLink, CarrierRecord } from "@/lib/carriers";
 import type { FieldChange } from "@/lib/change-notes";
 
@@ -54,17 +54,24 @@ export type PasswordRecord = {
   carrierLinks: CarrierLink[];
   /** Carrier portal username. */
   username: string;
-  /** Carrier portal password, exactly as entered (not trimmed). */
-  portalPassword: string;
+  /** Whether a carrier portal password is set. The password itself is never in a list. */
+  hasPassword: boolean;
   /** Defaults to "active" when adding. */
   status: PasswordStatus;
 };
 
 /** Password fields a note can record. The ID and the looked-up names never change on their own. */
-export type PasswordField = Exclude<keyof PasswordRecord, "id" | "agentName" | "carrierName" | "carrierLinks">;
+export type PasswordField =
+  | Exclude<keyof PasswordRecord, "id" | "agentName" | "carrierName" | "carrierLinks" | "hasPassword">
+  | "portalPassword";
 
-/** What the add / edit form submits. */
-export type PasswordValues = Pick<PasswordRecord, PasswordField>;
+/**
+ * What the add / edit form submits. The portal password exactly as typed
+ * (not trimmed); left blank on an edit, the current one stays.
+ */
+export type PasswordValues = Pick<PasswordRecord, Exclude<PasswordField, "portalPassword">> & {
+  portalPassword: string;
+};
 
 /** A save error, shown under the field it names, or under the form for `form`. */
 export type PasswordError = { field: PasswordField | "form"; message: string };
@@ -79,7 +86,8 @@ export type PasswordChange = FieldChange<PasswordField>;
 export type PasswordNote = {
   id: string;
   passwordId: PasswordRecord["id"];
-  kind: "added" | "edited";
+  /** "viewed": someone was handed the password (shown or copied); no changes. */
+  kind: "added" | "edited" | "viewed";
   /** ISO 8601 timestamp in UTC, e.g. "2026-09-02T14:05:00.000Z". */
   createdAt: string;
   /** Full name of who made the change, or null when unknown. */
@@ -96,17 +104,20 @@ export type ApiPassword = {
   agency: { id: string; name: string; is_active: boolean } | null;
   carrier: { id: string; name: string; status: string; is_active: boolean; links?: CarrierLink[] };
   username: string;
-  portal_password: string;
+  has_password: boolean;
   status: string;
   created_at: string;
   updated_at: string;
 };
 
+/** One password with its portal password (PasswordDetailSerializer), for the show and copy buttons. */
+export type ApiPasswordDetail = ApiPassword & { portal_password: string };
+
 /** A note as the API serialises it (PasswordNoteSerializer). */
 type ApiPasswordNote = {
   id: string;
   password_id: string;
-  kind: "added" | "edited";
+  kind: PasswordNote["kind"];
   changes: { field: string; from: string; to: string; redacted?: boolean }[];
   created_by: string | null;
   created_at: string;
@@ -138,7 +149,7 @@ export function toPasswordRecord(password: ApiPassword): PasswordRecord {
     carrierName: password.carrier.name,
     carrierLinks: password.carrier.links ?? [],
     username: password.username,
-    portalPassword: password.portal_password,
+    hasPassword: password.has_password,
     status: knownStatus ? (password.status as PasswordStatus) : "active",
   };
 }
@@ -166,16 +177,6 @@ function toPasswordNote(note: ApiPasswordNote): PasswordNote {
 export async function getPasswords(): Promise<PasswordRecord[]> {
   const passwords = await apiGetAll<ApiPassword>("/passwords/");
   return passwords.map(toPasswordRecord);
-}
-
-/** One password, or null when there is no such password. */
-export async function getPassword(id: string): Promise<PasswordRecord | null> {
-  const result = await apiFetch<ApiPassword>(`/passwords/${encodeURIComponent(id)}/`);
-  if (!result.ok) {
-    if (result.status === 404) return null;
-    throw new ApiError(`/passwords/${id}/`, result);
-  }
-  return toPasswordRecord(result.data);
 }
 
 /** One password's change notes, newest first. */

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
+import { revealPassword } from "@/app/(dashboard)/passwords/actions";
 import { ROW_BUTTON_CLASS } from "@/components/classes";
-import { CredentialValue } from "@/components/credential-value";
+import { CredentialValue, PortalPasswordValue } from "@/components/credential-value";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { DeleteIcon } from "@/components/delete-icon";
 import { EditIcon } from "@/components/edit-icon";
@@ -17,8 +18,8 @@ import type { PasswordRecord } from "@/lib/passwords";
  * with `onEdit` or `onDelete`), Agent and Carrier (`parties` picks which: a
  * profile leaves out its own side), the carrier's Links, Portal username,
  * Password and Status. Sort and search run in DataTable; the password is
- * neither sortable nor searchable, so typing part of one never reveals
- * which row it belongs to. Site passwords have their own table
+ * neither sortable nor searchable, and isn't on the page until a row's show
+ * or copy button fetches it (PortalPasswordValue). Site passwords have their own table
  * (components/site-passwords-table.tsx).
  *
  * The agency's own passwords show the agency in the Agent column with an
@@ -195,7 +196,9 @@ export function PasswordsTable({
       {
         id: "password",
         header: "Password",
-        cell: (password) => <CredentialValue value={password.portalPassword} label="password" secret />,
+        cell: (password) => (
+          <PortalPasswordValue hasPassword={password.hasPassword} reveal={() => revealPassword(password.id)} />
+        ),
         className: "text-fg-muted",
       },
       {

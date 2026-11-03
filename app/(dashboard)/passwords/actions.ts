@@ -1,10 +1,12 @@
 "use server";
 
 /*
- * Add or edit a password, run on the Next server so the access token stays
+ * Add, edit, delete or reveal a password, run on the Next server so the access token stays
  * in its HttpOnly cookie. POST /passwords/create/ or PATCH /passwords/{id}/;
  * the API keeps one password per agent at each carrier, rejects a blank
  * password, and records the change note (the password only as set/changed).
+ * GET /passwords/{id}/ is the only read that returns the portal password;
+ * the API notes each one as a view.
  *
  * What the API answers, and what the dialog shows for it:
  *
@@ -23,6 +25,7 @@ import { apiFetch } from "@/lib/api-server";
 import {
   toPasswordRecord,
   type ApiPassword,
+  type ApiPasswordDetail,
   type PasswordError,
   type PasswordRecord,
   type PasswordValues,
@@ -52,7 +55,8 @@ export async function savePassword(values: PasswordValues, editingId?: string): 
     agency_id: values.agencyId,
     carrier_id: values.carrierId,
     username: values.username,
-    portal_password: values.portalPassword,
+    // Left blank on an edit, the current password stays.
+    ...(editingId && values.portalPassword === "" ? {} : { portal_password: values.portalPassword }),
     status: values.status,
   };
   const result = editingId
@@ -76,6 +80,16 @@ export async function savePassword(values: PasswordValues, editingId?: string): 
 
   revalidatePath("/", "layout");
   return { ok: true, password: toPasswordRecord(result.data) };
+}
+
+/** One password's portal password, for the show and copy buttons; null when it can't be read. */
+export async function revealPassword(id: string): Promise<string | null> {
+  const result = await apiFetch<ApiPasswordDetail>(`/passwords/${encodeURIComponent(id)}/`);
+  if (!result.ok) {
+    if (result.status === 401) redirect("/login");
+    return null;
+  }
+  return result.data.portal_password;
 }
 
 /** Removes a password. The API soft-deletes it, so the same carrier can have one again. */

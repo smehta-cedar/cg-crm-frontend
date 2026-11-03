@@ -2,7 +2,7 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { GHOST_BUTTON_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS, TOOLBAR_INPUT_CLASS } from "@/components/classes";
-import { PasswordInput } from "@/components/credential-value";
+import { MASK, PasswordInput } from "@/components/credential-value";
 import { Field } from "@/components/field";
 import { ModalDialog, useModalDialog } from "@/components/modal-dialog";
 import { PROFILE_BUTTON_CLASS } from "@/components/profile-shell";
@@ -25,7 +25,8 @@ import { SiteDialog, type SiteEditor } from "./site-dialog";
  *
  * Opened from the Passwords page's Add buttons and row Edits, and the agent
  * profile's (agent fixed). An editor with `password` set edits that password,
- * every field filled in from it. Saves go through
+ * every field filled in from it except the portal password, which the page
+ * never holds: left blank, the current one stays. Saves go through
  * savePassword (./actions.ts) or saveSitePassword (./site-actions.ts), which
  * revalidate the dashboard; `onSaved` runs before the popup closes so the
  * caller can refresh.
@@ -135,6 +136,8 @@ function AddPasswordForm({
   // Pending: the login isn't issued yet, so username and password may be blank.
   const [statusValue, setStatusValue] = useState<PasswordStatus>(editing?.status ?? "active");
   const pending = statusValue === "pending";
+  // On an edit with a password already set, leaving the field blank keeps it.
+  const passwordRequired = !pending && !editing?.hasPassword;
 
   // An edited password's own carrier stays offered, open to agents or not.
   const carrierOptions = [...carriers]
@@ -175,7 +178,8 @@ function AddPasswordForm({
     const username = String(data.get("username") ?? "").trim();
     // Not trimmed or lowercased: spaces and case can matter in a password.
     const portalPassword = String(data.get("portalPassword") ?? "");
-    if (!pending && portalPassword.trim() === "") {
+    const keepsCurrent = editing?.hasPassword && portalPassword === "";
+    if (!pending && !keepsCurrent && portalPassword.trim() === "") {
       setErrors([{ field: "password", message: "Password can't be blank." }]);
       return;
     }
@@ -337,7 +341,7 @@ function AddPasswordForm({
           </Field>
           <Field
             label="Portal password"
-            required={!pending}
+            required={passwordRequired}
             htmlFor={`${id}-password`}
             hint={passwordError ?? undefined}
             hintId={`${id}-password-error`}
@@ -348,10 +352,10 @@ function AddPasswordForm({
             <PasswordInput
               id={`${id}-password`}
               name="portalPassword"
-              required={!pending}
+              required={passwordRequired}
               autoComplete="new-password"
               spellCheck={false}
-              defaultValue={editing?.portalPassword}
+              placeholder={editing?.hasPassword ? MASK : undefined}
               aria-invalid={passwordError ? true : undefined}
               aria-describedby={passwordError ? `${id}-password-error` : undefined}
               onChange={() => clear("password")}
