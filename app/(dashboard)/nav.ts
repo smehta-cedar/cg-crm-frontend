@@ -68,6 +68,8 @@ const NAV_ITEMS: NavItem[] = [
     // Contracts itself is the by-state view; by-carriers is the one sub-link.
     children: [{ href: "/contracts/by-carriers", label: "By carriers", icon: "carriers", module: "contracts.by_carriers" }],
   },
+  // UI mock only: sale form shell. No module gate so every signed-in user can open it.
+  { href: "/sold", label: "Sold", icon: "sold" },
   // Requests and the calendar they land on.
   { href: "/hr", label: "Calendar", icon: "hr", module: "requests" },
   { href: "/tasks", label: "Tasks", icon: "tasks", module: "tasks" },

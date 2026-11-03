@@ -1,0 +1,88 @@
+/* Celebration popup only — form uses CRM tokens. */
+
+.sold-party {
+  border: 0;
+  border-radius: 0.75rem;
+  padding: 0;
+  width: min(22rem, 88vw);
+  max-width: 88vw;
+  text-align: center;
+  background: var(--color-surface);
+  color: var(--color-fg);
+  box-shadow: 0 16px 40px rgb(17 24 39 / 0.18);
+  overflow: hidden;
+}
+
+.sold-party::backdrop {
+  background: var(--color-scrim);
+}
+
+.sold-party[open] {
+  animation: sold-pop 0.35s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.sold-party::before {
+  content: "";
+  display: block;
+  height: 0.35rem;
+  background-image: var(--gradient-brand);
+}
+
+.sold-party-body {
+  padding: 1.5rem 1.25rem 1.25rem;
+}
+
+.sold-party-emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.sold-party h2 {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-brand-ink);
+  letter-spacing: 0.02em;
+}
+
+.sold-party p {
+  margin: 0 0 0.35rem;
+  color: var(--color-fg-muted);
+  font-size: 0.875rem;
+}
+
+.sold-party .sold-party-total {
+  margin: 0.6rem 0 1.1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.sold-confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+@keyframes sold-pop {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sold-party[open] {
+    animation: none;
+  }
+}
