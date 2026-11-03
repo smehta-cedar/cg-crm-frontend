@@ -68,8 +68,21 @@ const NAV_ITEMS: NavItem[] = [
     // Contracts itself is the by-state view; by-carriers is the one sub-link.
     children: [{ href: "/contracts/by-carriers", label: "By carriers", icon: "carriers", module: "contracts.by_carriers" }],
   },
-  // UI mock only: sale form shell. No module gate so every signed-in user can open it.
-  { href: "/sold", label: "Sold", icon: "sold" },
+  // Sales: the list (one row per product), the form agents submit, and the
+  // leaderboard. List is the section href so navbar search scopes the product table.
+  {
+    href: "/sold/list",
+    label: "Sold",
+    listLabel: "List",
+    listIcon: "list",
+    icon: "sold",
+    listModule: "sold.list",
+    searchable: true,
+    children: [
+      { href: "/sold", label: "Sold-form", icon: "sold", module: "sold.form" },
+      { href: "/sold/leaderboard", label: "Leaderboard", icon: "leaderboard", module: "sold.leaderboard" },
+    ],
+  },
   // Appointment-setter click tracker: the Click panel is where the SDR role
   // logs calls; History is the daily/month view.
   {

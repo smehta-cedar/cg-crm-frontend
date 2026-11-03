@@ -1,52 +1,45 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent, type MutableRefObject } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from "react";
+import { submitSale, type SubmitSaleResult } from "@/app/(dashboard)/sold/actions";
 import { GHOST_BUTTON_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/classes";
 import { Field } from "@/components/field";
 import { PageHeader } from "@/components/page-header";
 import { FormSection } from "@/components/producer-form";
-import { api } from "@/lib/sold/api";
 import { confetti } from "@/lib/sold/confetti";
-import { FieldDef, SECTIONS } from "@/lib/sold/formConfig";
+import { optionList, SECTIONS, type FieldDef } from "@/lib/sold/formConfig";
 import {
-  collectFields,
   emptySaleState,
+  fieldRequired,
   fieldVisible,
-  partyPremiumTotal,
-  productsNeedingUpload,
-  productStateKey,
-  tidyMbi,
-  tidyPhone,
-  tidyValues,
-  validateAll,
-  validateKey,
+  productKey,
+  saleFormData,
   type SaleMe,
   type SaleState,
-  type SubmitFields,
 } from "@/lib/sold/logic";
+import type { SoldOptions, SubmittedSale } from "@/lib/sold/types";
 import { ProductPicker } from "./ProductPicker";
 import "./sale-form.css";
 
 type SaleFormProps = {
   me: SaleMe;
-};
-
-type DoneInfo = {
-  first: string;
-  last: string;
-  products: string[];
-  fields: SubmitFields;
+  /** The products, carriers and lists the API offers, with its rules. */
+  options: SoldOptions;
+  /** When false, the parent owns the page header. */
+  showHeader?: boolean;
+  /** Extra actions under “Submit another sale” on the success card (e.g. link to the list). */
+  afterSubmit?: ReactNode;
 };
 
 /** Grid column span. Client Info uses 6 cols so Phone / State / AOR share one row. */
 function fieldSpan(field: FieldDef, sectionTitle: string) {
   if (sectionTitle === "Client Info") {
-    if (field.key === "Client First Name" || field.key === "Client Last Name") return "sm:col-span-3";
-    if (field.key === "Client Phone" || field.key === "State" || field.key === "AOR") return "sm:col-span-2";
+    if (field.key === "client_first_name" || field.key === "client_last_name") return "sm:col-span-3";
+    return "sm:col-span-2";
   }
-  if (field.type === "products" || field.key === "Product Sold") return "sm:col-span-2";
+  if (field.type === "products") return "sm:col-span-2";
   // New row so “Previous MAPD/PDP Product” lands beside it when Yes (same as Replacement Sale).
-  if (field.key === "Prior MAPD/PDP Enrollment") return "sm:col-start-1";
+  if (field.key === "prior_mapd_pdp_enrollment") return "sm:col-start-1";
   return "";
 }
 
@@ -56,7 +49,18 @@ function sectionColumns(title: string) {
   return "sm:grid-cols-2";
 }
 
-export function SaleForm({ me }: SaleFormProps) {
+/** Every question key in page order, the ticked products' answers after the product list. */
+function keysInOrder(state: SaleState, options: SoldOptions): string[] {
+  return SECTIONS.flatMap((section) =>
+    section.fields.flatMap((field) => {
+      if (field.type !== "products") return [field.key];
+      const ticked = options.products.filter((product) => state.products.includes(product.name));
+      return [field.key, ...ticked.flatMap((product) => product.fields.map((name) => productKey(product.name, name)))];
+    }),
+  );
+}
+
+export function SaleForm({ me, options, showHeader = true, afterSubmit }: SaleFormProps) {
   const idPrefix = useId();
   const headerRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -67,8 +71,8 @@ export function SaleForm({ me }: SaleFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<DoneInfo | null>(null);
-  const [party, setParty] = useState<DoneInfo | null>(null);
+  const [done, setDone] = useState<SubmittedSale | null>(null);
+  const [party, setParty] = useState<SubmittedSale | null>(null);
   const [fileKeys, setFileKeys] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -89,70 +93,37 @@ export function SaleForm({ me }: SaleFormProps) {
     if (!reduced && canPopover && canvas) confetti(canvas, dialog);
   }, [party]);
 
-  const setValue = (key: string, value: string) => {
-    setState((current) => {
-      const next = { ...current, values: { ...current.values, [key]: value } };
-      setErrors((errs) => recheckInvalid(errs, next));
-      return next;
-    });
+  // An answer that changes drops its error; the API checks it again on submit.
+  const clearErrors = (matches: (key: string) => boolean) => {
+    setErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !matches(key))));
   };
 
-  const onBlurField = (key: string) => {
-    setState((current) => {
-      let next = current;
-      if (key === "Client Phone") {
-        next = { ...current, values: { ...current.values, [key]: tidyPhone(current.values[key] ?? "") } };
-      } else if (key.endsWith(":Medicare Number (MBI)")) {
-        next = { ...current, values: { ...current.values, [key]: tidyMbi(current.values[key] ?? "") } };
-      }
-      setErrors((errs) => recheckInvalid(errs, next));
-      return next;
-    });
+  const setValue = (key: string, value: string) => {
+    setState((current) => ({ ...current, values: { ...current.values, [key]: value } }));
+    clearErrors((k) => k === key);
   };
 
   const onToggleProduct = (product: string, checked: boolean) => {
-    setState((current) => {
-      const products = checked
-        ? [...current.products, product]
-        : current.products.filter((p) => p !== product);
-      const next = { ...current, products };
-      setErrors((errs) => {
-        const cleared = { ...errs };
-        if (!checked) {
-          for (const k of Object.keys(cleared)) {
-            if (k === "Product Sold" || k.startsWith(`${product}:`)) delete cleared[k];
-          }
-        }
-        return recheckInvalid(cleared, next);
-      });
-      return next;
-    });
+    setState((current) => ({
+      ...current,
+      products: checked ? [...current.products, product] : current.products.filter((p) => p !== product),
+    }));
+    clearErrors((k) => k === "products" || k.startsWith(`${product}.`));
   };
 
   const onSkipPdf = (product: string, skip: boolean) => {
-    setState((current) => {
-      const files = { ...current.files };
-      const skipPdf = { ...current.skipPdf, [product]: skip };
-      if (skip) {
-        files[product] = null;
-        setFileKeys((keys) => ({ ...keys, [product]: (keys[product] ?? 0) + 1 }));
-      }
-      const next = { ...current, skipPdf, files };
-      setErrors((errs) => {
-        const cleared = { ...errs };
-        delete cleared[productStateKey(product, "PDF")];
-        return recheckInvalid(cleared, next);
-      });
-      return next;
-    });
+    setState((current) => ({
+      ...current,
+      skipPdf: { ...current.skipPdf, [product]: skip },
+      files: skip ? { ...current.files, [product]: null } : current.files,
+    }));
+    if (skip) setFileKeys((keys) => ({ ...keys, [product]: (keys[product] ?? 0) + 1 }));
+    clearErrors((k) => k === productKey(product, "pdf"));
   };
 
   const onFile = (product: string, file: File | null) => {
-    setState((current) => {
-      const next = { ...current, files: { ...current.files, [product]: file } };
-      setErrors((errs) => recheckInvalid(errs, next));
-      return next;
-    });
+    setState((current) => ({ ...current, files: { ...current.files, [product]: file } }));
+    clearErrors((k) => k === productKey(product, "pdf"));
   };
 
   const clearForm = (ask: boolean) => {
@@ -170,16 +141,25 @@ export function SaleForm({ me }: SaleFormProps) {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setBanner("");
-    const tidied = tidyValues(state);
-    setState(tidied);
+    setSubmitting(true);
+    let result: SubmitSaleResult;
+    try {
+      result = await submitSale(saleFormData(state, options));
+    } catch {
+      // No answer at all, e.g. the PDFs were too big to send.
+      result = { ok: false, message: "Something went wrong.", errors: {} };
+    } finally {
+      setSubmitting(false);
+    }
 
-    const all = validateAll(tidied);
-    if (all.length) {
-      const map: Record<string, string> = {};
-      for (const err of all) map[err.key] = err.message;
-      setErrors(map);
-      setBanner("Some answers need fixing. They’re marked in red above.");
-      const first = all[0]?.key;
+    if (!result.ok) {
+      const { errors: found, message } = result;
+      setErrors(found);
+      const order = keysInOrder(state, options);
+      const first = order.find((key) => found[key]);
+      // A problem with no question on the page says itself in the banner.
+      const unplaced = Object.entries(found).find(([key]) => !order.includes(key));
+      setBanner(first && !unplaced ? message : `The sale wasn’t saved: ${unplaced?.[1] ?? message} Try submitting again.`);
       const el = first ? fieldRefs.current[first] : null;
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       el?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
@@ -187,44 +167,9 @@ export function SaleForm({ me }: SaleFormProps) {
     }
 
     setErrors({});
-    setSubmitting(true);
-    try {
-      const fields = collectFields(tidied);
-      const uploads = productsNeedingUpload(tidied);
-      const pdfIds = await Promise.all(
-        uploads.map(async (product) => {
-          const file = tidied.files[product];
-          if (!file) throw new Error("Missing PDF.");
-          const result = await api<{ id: string }>(`/api/upload?product=${encodeURIComponent(product)}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/octet-stream" },
-            body: file,
-          });
-          return result.id;
-        }),
-      );
-
-      await api("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields, pdfIds }),
-      });
-
-      const info: DoneInfo = {
-        first: String(fields["Client First Name"] ?? "").trim(),
-        last: String(fields["Client Last Name"] ?? "").trim(),
-        products: Array.isArray(fields["Product Sold"]) ? (fields["Product Sold"] as string[]) : [],
-        fields,
-      };
-      setDone(info);
-      setParty(info);
-      headerRef.current?.scrollIntoView({ block: "start" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong.";
-      setBanner(`The sale wasn’t saved: ${message} Try submitting again.`);
-    } finally {
-      setSubmitting(false);
-    }
+    setDone(result.sale);
+    setParty(result.sale);
+    headerRef.current?.scrollIntoView({ block: "start" });
   };
 
   const submitAnother = () => {
@@ -249,19 +194,19 @@ export function SaleForm({ me }: SaleFormProps) {
       columns={sectionColumns(section.title)}
     >
       {section.fields.map((field) =>
-        fieldVisible(field, state) ? (
+        fieldVisible(field, state, options) ? (
           <TopField
             key={field.key}
             idPrefix={idPrefix}
             field={field}
             sectionTitle={section.title}
+            options={options}
             state={state}
             error={errors[field.key]}
             errors={errors}
             fileKeys={fileKeys}
             fieldRefs={fieldRefs}
             onValue={setValue}
-            onBlur={onBlurField}
             onToggleProduct={onToggleProduct}
             onSkipPdf={onSkipPdf}
             onFile={onFile}
@@ -274,27 +219,30 @@ export function SaleForm({ me }: SaleFormProps) {
   return (
     <>
       <div ref={headerRef}>
-        <PageHeader
-          title="Sold"
-          description={
-            <>
-              {submittingAs ? <span>{submittingAs}. </span> : null}
-              <span>Submit a sale.</span>
-            </>
-          }
-        />
+        {showHeader ? (
+          <PageHeader
+            title="Sold"
+            description={
+              <>
+                {submittingAs ? <span>{submittingAs}. </span> : null}
+                <span>Submit a sale.</span>
+              </>
+            }
+          />
+        ) : null}
 
         {done ? (
           <div className="rounded-lg border border-line bg-surface p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-fg">Sale submitted</h2>
             <p className="mt-1 text-sm text-fg-muted">
-              {done.first || done.last
-                ? `The sale for ${[done.first, done.last].filter(Boolean).join(" ")} is recorded.`
-                : "Your sale is recorded."}
+              {done.clientName ? `The sale for ${done.clientName} is recorded.` : "Your sale is recorded."}
             </p>
-            <button type="button" className={`${PRIMARY_BUTTON_CLASS} mt-5`} onClick={submitAnother}>
-              Submit another sale
-            </button>
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button type="button" className={PRIMARY_BUTTON_CLASS} onClick={submitAnother}>
+                Submit another sale
+              </button>
+              {afterSubmit}
+            </div>
           </div>
         ) : (
           <form noValidate onSubmit={handleSubmit}>
@@ -343,17 +291,11 @@ export function SaleForm({ me }: SaleFormProps) {
               🎉
             </div>
             <h2 id="partyTitle">SOLD!!!</h2>
-            <p>
-              {party.first || party.last
-                ? `Great work closing ${[party.first, party.last].filter(Boolean).join(" ")}!`
-                : "Great work!"}
-            </p>
+            <p>{party.clientName ? `Great work closing ${party.clientName}!` : "Great work!"}</p>
             <p>{party.products.join(" · ")}</p>
-            {(() => {
-              const total = partyPremiumTotal(party.fields, party.products);
-              if (!total) return null;
-              return <p className="sold-party-total">{`$${total.toFixed(2)} in premium`}</p>;
-            })()}
+            {party.totalPremium && Number(party.totalPremium) > 0 ? (
+              <p className="sold-party-total">{`$${party.totalPremium} in premium`}</p>
+            ) : null}
             <button type="button" className={`${PRIMARY_BUTTON_CLASS} sold-party-ok`} onClick={closeParty}>
               Woohoo!
             </button>
@@ -363,15 +305,6 @@ export function SaleForm({ me }: SaleFormProps) {
       <canvas ref={canvasRef} className="sold-confetti" aria-hidden="true" />
     </>
   );
-}
-
-function recheckInvalid(errors: Record<string, string>, state: SaleState): Record<string, string> {
-  const next: Record<string, string> = {};
-  for (const key of Object.keys(errors)) {
-    const message = validateKey(key, state);
-    if (message) next[key] = message;
-  }
-  return next;
 }
 
 function YesNo({
@@ -414,13 +347,13 @@ function TopField({
   idPrefix,
   field,
   sectionTitle,
+  options,
   state,
   error,
   errors,
   fileKeys,
   fieldRefs,
   onValue,
-  onBlur,
   onToggleProduct,
   onSkipPdf,
   onFile,
@@ -428,22 +361,26 @@ function TopField({
   idPrefix: string;
   field: FieldDef;
   sectionTitle: string;
+  options: SoldOptions;
   state: SaleState;
   error?: string;
   errors: Record<string, string>;
   fileKeys: Record<string, number>;
   fieldRefs: MutableRefObject<Record<string, HTMLElement | null>>;
   onValue: (key: string, value: string) => void;
-  onBlur: (key: string) => void;
   onToggleProduct: (product: string, checked: boolean) => void;
   onSkipPdf: (product: string, skip: boolean) => void;
   onFile: (product: string, file: File | null) => void;
 }) {
   const id = `${idPrefix}-${field.key}`.replace(/\W+/g, "-");
-  const label = field.label ?? field.name;
+  const required = fieldRequired(field, state);
   const value = state.values[field.key] ?? "";
   const span = fieldSpan(field, sectionTitle);
   const err = error ? { hint: error, hintId: `${id}-error`, error: true as const } : {};
+  const aria = {
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
+  };
 
   const setRef = (el: HTMLElement | null) => {
     fieldRefs.current[field.key] = el;
@@ -452,10 +389,11 @@ function TopField({
   if (field.type === "products") {
     return (
       <div className={span} ref={setRef}>
-        <Field label={label} htmlFor={id} required={field.required} {...err}>
+        <Field label={field.label} htmlFor={id} required={required} {...err}>
           <div id={id} className="mt-1">
             <ProductPicker
               idPrefix={idPrefix}
+              options={options}
               state={state}
               errors={errors}
               fileKeys={fileKeys}
@@ -466,7 +404,6 @@ function TopField({
               onValue={onValue}
               onSkipPdf={onSkipPdf}
               onFile={onFile}
-              onBlur={onBlur}
             />
           </div>
         </Field>
@@ -474,10 +411,10 @@ function TopField({
     );
   }
 
-  if (field.type === "radio") {
+  if (field.type === "yesno") {
     return (
       <div className={span || undefined} ref={setRef}>
-        <Field label={label} htmlFor={id} required={field.required} {...err}>
+        <Field label={field.label} htmlFor={id} required={required} {...err}>
           <YesNo name={field.key} value={value} onChange={(next) => onValue(field.key, next)} />
         </Field>
       </div>
@@ -487,20 +424,18 @@ function TopField({
   if (field.type === "select") {
     return (
       <div className={span || undefined} ref={setRef}>
-        <Field label={label} htmlFor={id} required={field.required} optional={!field.required} {...err}>
+        <Field label={field.label} htmlFor={id} required={required} optional={!required} {...err}>
           <select
             id={id}
             value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
+            {...aria}
             onChange={(event) => onValue(field.key, event.target.value)}
-            onBlur={() => onBlur(field.key)}
             className={INPUT_CLASS}
           >
             <option value="">Choose</option>
-            {(field.options ?? []).map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {(field.options ? optionList(options, field.options) : []).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -509,39 +444,17 @@ function TopField({
     );
   }
 
-  if (field.type === "phone") {
-    return (
-      <div className={span || undefined} ref={setRef}>
-        <Field label={label} htmlFor={id} required={field.required} {...err}>
-          <input
-            id={id}
-            type="tel"
-            inputMode="tel"
-            autoComplete="off"
-            placeholder="(555) 555-5555"
-            value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(event) => onValue(field.key, event.target.value)}
-            onBlur={() => onBlur(field.key)}
-            className={INPUT_CLASS}
-          />
-        </Field>
-      </div>
-    );
-  }
-
+  const phone = field.type === "phone";
   return (
     <div className={span || undefined} ref={setRef}>
-      <Field label={label} htmlFor={id} required={field.required} {...err}>
+      <Field label={field.label} htmlFor={id} required={required} {...err}>
         <input
           id={id}
-          type="text"
+          type={phone ? "tel" : "text"}
+          {...(phone ? { inputMode: "tel" as const, autoComplete: "off", placeholder: "(555) 555-5555" } : {})}
           value={value}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
+          {...aria}
           onChange={(event) => onValue(field.key, event.target.value)}
-          onBlur={() => onBlur(field.key)}
           className={INPUT_CLASS}
         />
       </Field>

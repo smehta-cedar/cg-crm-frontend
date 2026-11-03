@@ -1,19 +1,21 @@
 "use client";
 
-import { OPTIONS, PDF_CAN_SKIP, PRODUCT_FIELDS } from "@/lib/sold/formConfig";
+import { productFieldLabel } from "@/lib/sold/formConfig";
 import {
   blockedProducts,
   formatPremiumTotal,
   incompatibleNote,
   pdfRequired,
-  productStateKey,
+  productKey,
   type SaleState,
 } from "@/lib/sold/logic";
+import type { ProductField, ProductOption, SoldOptions } from "@/lib/sold/types";
 import { INPUT_CLASS } from "@/components/classes";
 import { Field } from "@/components/field";
 
 type ProductPickerProps = {
   idPrefix: string;
+  options: SoldOptions;
   state: SaleState;
   errors: Record<string, string>;
   fileKeys: Record<string, number>;
@@ -22,11 +24,11 @@ type ProductPickerProps = {
   onValue: (key: string, value: string) => void;
   onSkipPdf: (product: string, skip: boolean) => void;
   onFile: (product: string, file: File | null) => void;
-  onBlur: (key: string) => void;
 };
 
 export function ProductPicker({
   idPrefix,
+  options,
   state,
   errors,
   fileKeys,
@@ -35,21 +37,20 @@ export function ProductPicker({
   onValue,
   onSkipPdf,
   onFile,
-  onBlur,
 }: ProductPickerProps) {
-  const blocked = blockedProducts(state.products);
-  const note = incompatibleNote(state.products);
+  const blocked = blockedProducts(state.products, options);
+  const note = incompatibleNote(state.products, options);
   const total = formatPremiumTotal(state);
 
   return (
     <div className="space-y-3">
       <div className="grid gap-2">
-        {OPTIONS.products.map((product) => {
-          const ticked = state.products.includes(product);
-          const off = !ticked && blocked.has(product);
+        {options.products.map((product) => {
+          const ticked = state.products.includes(product.name);
+          const off = !ticked && blocked.has(product.name);
           return (
             <div
-              key={product}
+              key={product.name}
               className={`rounded-md border transition-colors ${
                 ticked
                   ? "border-brand-strong/35 bg-brand-soft"
@@ -65,31 +66,31 @@ export function ProductPicker({
               >
                 <input
                   type="checkbox"
-                  value={product}
+                  value={product.name}
                   checked={ticked}
                   disabled={off}
-                  onChange={(event) => onToggle(product, event.target.checked)}
+                  onChange={(event) => onToggle(product.name, event.target.checked)}
                   className="size-4 accent-brand-strong"
                 />
-                {product}
+                {product.name}
               </label>
               {ticked ? (
                 <div className="border-t border-line/80 px-3.5 pb-3.5 pt-1">
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {(PRODUCT_FIELDS[product] ?? []).map((entry) => (
+                    {product.fields.map((field) => (
                       <ProductEntry
-                        key={entry}
+                        key={field}
                         idPrefix={idPrefix}
                         product={product}
-                        entry={entry}
+                        field={field}
+                        options={options}
                         state={state}
-                        error={errors[productStateKey(product, entry)]}
-                        fileKey={fileKeys[product] ?? 0}
+                        error={errors[productKey(product.name, field)]}
+                        fileKey={fileKeys[product.name] ?? 0}
                         onFieldRef={onFieldRef}
                         onValue={onValue}
                         onSkipPdf={onSkipPdf}
                         onFile={onFile}
-                        onBlur={onBlur}
                       />
                     ))}
                   </div>
@@ -108,7 +109,8 @@ export function ProductPicker({
 function ProductEntry({
   idPrefix,
   product,
-  entry,
+  field,
+  options,
   state,
   error,
   fileKey,
@@ -116,11 +118,11 @@ function ProductEntry({
   onValue,
   onSkipPdf,
   onFile,
-  onBlur,
 }: {
   idPrefix: string;
-  product: string;
-  entry: string;
+  product: ProductOption;
+  field: ProductField;
+  options: SoldOptions;
   state: SaleState;
   error?: string;
   fileKey: number;
@@ -128,34 +130,36 @@ function ProductEntry({
   onValue: (key: string, value: string) => void;
   onSkipPdf: (product: string, skip: boolean) => void;
   onFile: (product: string, file: File | null) => void;
-  onBlur: (key: string) => void;
 }) {
-  const key = productStateKey(product, entry);
-  const id = `${idPrefix}-${product}-${entry}`.replace(/\W+/g, "-");
+  const key = productKey(product.name, field);
+  const id = `${idPrefix}-${product.name}-${field}`.replace(/\W+/g, "-");
+  const label = productFieldLabel(product.name, field);
   const value = state.values[key] ?? "";
   const setRef = (el: HTMLElement | null) => onFieldRef?.(key, el);
   const err = error
     ? { hint: error, hintId: `${id}-error`, error: true as const }
     : {};
+  const aria = {
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": error ? `${id}-error` : undefined,
+  };
 
-  if (entry === "PDF") {
-    const required = pdfRequired(product, state);
-    const skipped = Boolean(state.skipPdf[product]);
-    const canSkip = (PDF_CAN_SKIP as readonly string[]).includes(product);
+  if (field === "pdf") {
+    const skipped = Boolean(state.skipPdf[product.name]);
+    const canSkip = product.pdf === "skippable";
 
     return (
       <>
         <div ref={setRef} className={canSkip ? "sm:col-span-1" : undefined}>
-          <Field label={`${product} PDF`} htmlFor={id} required={required} {...err}>
+          <Field label={label} htmlFor={id} required={pdfRequired(product, state)} {...err}>
             <input
               key={fileKey}
               id={id}
               type="file"
               accept="application/pdf,.pdf"
               disabled={skipped}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${id}-error` : undefined}
-              onChange={(event) => onFile(product, event.target.files?.[0] ?? null)}
+              {...aria}
+              onChange={(event) => onFile(product.name, event.target.files?.[0] ?? null)}
               className={`${INPUT_CLASS} file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-2 file:py-1 file:text-sm file:font-medium file:text-fg disabled:opacity-50`}
             />
           </Field>
@@ -165,7 +169,7 @@ function ProductEntry({
             <input
               type="checkbox"
               checked={skipped}
-              onChange={(event) => onSkipPdf(product, event.target.checked)}
+              onChange={(event) => onSkipPdf(product.name, event.target.checked)}
               className="size-4 accent-brand-strong"
             />
             Unable to generate
@@ -175,23 +179,21 @@ function ProductEntry({
     );
   }
 
-  if (entry === "Carrier") {
+  if (field === "carrier") {
     return (
       <div ref={setRef}>
-        <Field label="Carrier" htmlFor={id} required {...err}>
+        <Field label={label} htmlFor={id} required {...err}>
           <select
             id={id}
             value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
+            {...aria}
             onChange={(event) => onValue(key, event.target.value)}
-            onBlur={() => onBlur(key)}
             className={INPUT_CLASS}
           >
             <option value="">Choose</option>
-            {OPTIONS.carriers.map((carrier) => (
-              <option key={carrier} value={carrier}>
-                {carrier}
+            {options.carriers.map((carrier) => (
+              <option key={carrier.id} value={carrier.id}>
+                {carrier.name}
               </option>
             ))}
           </select>
@@ -200,10 +202,10 @@ function ProductEntry({
     );
   }
 
-  if (entry.endsWith(" Premium")) {
+  if (field === "premium") {
     return (
       <div ref={setRef}>
-        <Field label={entry} htmlFor={id} required {...err}>
+        <Field label={label} htmlFor={id} required {...err}>
           <div className="relative">
             <span className="pointer-events-none absolute left-3 top-[calc(50%+0.125rem)] -translate-y-1/2 text-sm text-fg-subtle">
               $
@@ -216,10 +218,8 @@ function ProductEntry({
               inputMode="decimal"
               placeholder="0.00"
               value={value}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${id}-error` : undefined}
+              {...aria}
               onChange={(event) => onValue(key, event.target.value)}
-              onBlur={() => onBlur(key)}
               className={`${INPUT_CLASS} pl-7`}
             />
           </div>
@@ -228,82 +228,16 @@ function ProductEntry({
     );
   }
 
-  if (entry === "Medicare Number (MBI)") {
+  if (field === "effective_date") {
     return (
       <div ref={setRef}>
-        <Field label="Medicare Number (MBI)" htmlFor={id} required {...err}>
-          <input
-            id={id}
-            type="text"
-            maxLength={14}
-            autoCapitalize="characters"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="e.g. 1EG4TE5MK73"
-            value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(event) => onValue(key, event.target.value)}
-            onBlur={() => onBlur(key)}
-            className={INPUT_CLASS}
-          />
-        </Field>
-      </div>
-    );
-  }
-
-  if (entry === "Contract Number") {
-    return (
-      <div ref={setRef}>
-        <Field label="Contract Number" htmlFor={id} required {...err}>
-          <input
-            id={id}
-            type="text"
-            placeholder="e.g. H7617-052"
-            value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(event) => onValue(key, event.target.value)}
-            onBlur={() => onBlur(key)}
-            className={INPUT_CLASS}
-          />
-        </Field>
-      </div>
-    );
-  }
-
-  if (entry === "Sup Plan") {
-    return (
-      <div ref={setRef}>
-        <Field label="Sup Plan" htmlFor={id} required {...err}>
-          <input
-            id={id}
-            type="text"
-            placeholder="e.g. Plan G"
-            value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(event) => onValue(key, event.target.value)}
-            onBlur={() => onBlur(key)}
-            className={INPUT_CLASS}
-          />
-        </Field>
-      </div>
-    );
-  }
-
-  if (entry === "Effective Date") {
-    return (
-      <div ref={setRef}>
-        <Field label="Effective Date" htmlFor={id} required {...err}>
+        <Field label={label} htmlFor={id} required {...err}>
           <input
             id={id}
             type="date"
             value={value}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
+            {...aria}
             onChange={(event) => onValue(key, event.target.value)}
-            onBlur={() => onBlur(key)}
             className={INPUT_CLASS}
           />
         </Field>
@@ -311,5 +245,24 @@ function ProductEntry({
     );
   }
 
-  return null;
+  // MBI, contract number, SUP plan: plain text.
+  const placeholder = { mbi: "e.g. 1EG4TE5MK73", contract_number: "e.g. H7617-052", sup_plan: "e.g. Plan G" }[field];
+  return (
+    <div ref={setRef}>
+      <Field label={label} htmlFor={id} required {...err}>
+        <input
+          id={id}
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          {...(field === "mbi"
+            ? { maxLength: 14, autoCapitalize: "characters", autoComplete: "off", spellCheck: false }
+            : {})}
+          {...aria}
+          onChange={(event) => onValue(key, event.target.value)}
+          className={INPUT_CLASS}
+        />
+      </Field>
+    </div>
+  );
 }

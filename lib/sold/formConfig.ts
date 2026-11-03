@@ -1,211 +1,108 @@
-export const OPTIONS = {
-  products: ["MAPD", "PDP", "SUP", "DVH", "HIP", "HHC", "RCP", "Cancer", "Heart"],
-  leadSources: [
-    "Google",
-    "Mailers",
-    "Marketing",
-    "Medicare Hub",
-    "Old Lead Source",
-    "P&C",
-    "Quotely",
-    "Rawlin",
-    "Referral",
-    "SF",
-    "T65 Lead Heroes",
-    "Webinar",
-  ],
-  carriers: [
-    "ABL",
-    "Aetna",
-    "AFLAC",
-    "Bankers Fidelity",
-    "BlueCross BlueShield LA",
-    "Devoted",
-    "GTL",
-    "HealthSpring",
-    "Heartland National",
-    "Highmark",
-    "Humana",
-    "Liberty Bankers",
-    "Medico",
-    "Mutual of Omaha",
-    "Physicians Mutual",
-    "United Healthcare",
-    "UPMC",
-    "WellCare",
-  ],
-  calendars: ["AB", "AD", "AEP", "VA"],
-  umbrella: ["Umbrella #1", "Umbrella #2", "Umbrella #3"],
-  states: [
-    "AL",
-    "AK",
-    "AZ",
-    "AR",
-    "CA",
-    "CO",
-    "CT",
-    "DE",
-    "DC",
-    "FL",
-    "GA",
-    "HI",
-    "ID",
-    "IL",
-    "IN",
-    "IA",
-    "KS",
-    "KY",
-    "LA",
-    "ME",
-    "MD",
-    "MA",
-    "MI",
-    "MN",
-    "MS",
-    "MO",
-    "MT",
-    "NE",
-    "NV",
-    "NH",
-    "NJ",
-    "NM",
-    "NY",
-    "NC",
-    "ND",
-    "OH",
-    "OK",
-    "OR",
-    "PA",
-    "RI",
-    "SC",
-    "SD",
-    "TN",
-    "TX",
-    "UT",
-    "VT",
-    "VA",
-    "WA",
-    "WV",
-    "WI",
-    "WY",
-  ],
-  yesNo: ["Yes", "No"],
-} as const;
+import type { ProductField, SoldOptions } from "./types";
 
-// What each product asks for once it's ticked, in this order (§6.2 says how each one is named in the payload)
-export const PRODUCT_FIELDS: Record<string, string[]> = {
-  MAPD: ["Carrier", "Medicare Number (MBI)", "Contract Number", "Effective Date", "PDF"],
-  PDP: ["Carrier", "Medicare Number (MBI)", "Contract Number", "Effective Date", "PDF"],
-  SUP: ["Carrier", "SUP Premium", "Sup Plan", "Effective Date", "PDF"],
-  DVH: ["Carrier", "DVH Premium", "Effective Date", "PDF"],
-  HIP: ["Carrier", "HIP Premium", "Effective Date", "PDF"],
-  HHC: ["Carrier", "HHC Premium", "Effective Date", "PDF"],
-  RCP: ["Carrier", "RCP Premium", "Effective Date", "PDF"],
-  Cancer: ["Carrier", "Cancer Premium", "Effective Date", "PDF"],
-  Heart: ["Carrier", "Heart Premium", "Effective Date", "PDF"],
-};
+/*
+ * How the Sold form lays out its questions. Keys are the API's field names
+ * (POST /sold/create/), so its errors land on the right question. The
+ * choices and every rule come from the API (GET /sold/options/).
+ */
 
-// Pairs that can't be sold together: once one is ticked, the other is disabled and greyed out
-export const INCOMPATIBLE: [string, string][] = [
-  ["MAPD", "PDP"],
-  ["MAPD", "SUP"],
-];
-
-export const PDF_REQUIRED = true; // every ticked product needs its PDF, except:
-export const PDF_CAN_SKIP = ["SUP"]; // …these get an "Unable to generate" box that turns their upload off
-export const PDF_OPTIONAL_IF_AOR = ["MAPD"]; // …and these don't need it when AOR is "Yes"
-export const MAX_PDF_MB = 4; // the backend refuses bigger files
-export const PLAN_ONLY = ["MAPD", "PDP"];
+/** Which list from the API a select offers. */
+export type OptionList = "states" | "leadSources" | "calendars" | "umbrellas" | "products" | "planProducts";
 
 export type FieldDef = {
-  key: string; // unique state key
-  name: string; // payload key (also the label, unless `label` is set)
-  type: "text" | "phone" | "select" | "radio" | "products";
+  key: string;
+  label: string;
+  type: "text" | "phone" | "select" | "yesno" | "products";
   required: boolean;
-  options?: readonly string[];
-  w: 1 | 2 | 3 | 4 | 5 | 6; // width out of 6 grid columns
-  label?: string;
-  showIf?: "otherProductPicked" | "replacementYesAndNothingPicked" | "priorPlanYes";
+  options?: OptionList;
+  /**
+   * previousSoldProduct: beside a product other than a plan, or, starred,
+   * on a replacement sale before anything is ticked. priorPlanYes: after a
+   * Yes to the prior enrollment question.
+   */
+  showIf?: "previousSoldProduct" | "priorPlanYes";
 };
 
 export const SECTIONS: { title: string; fields: FieldDef[] }[] = [
   {
     title: "Client Info",
     fields: [
-      { key: "Client First Name", name: "Client First Name", type: "text", required: true, w: 2 },
-      { key: "Client Last Name", name: "Client Last Name", type: "text", required: true, w: 2 },
-      { key: "Client Phone", name: "Client Phone", type: "phone", required: true, w: 2 },
-      { key: "State", name: "State", type: "select", required: true, options: OPTIONS.states, w: 3 },
-      { key: "AOR", name: "AOR", type: "radio", required: true, options: OPTIONS.yesNo, w: 3 },
+      { key: "client_first_name", label: "Client First Name", type: "text", required: true },
+      { key: "client_last_name", label: "Client Last Name", type: "text", required: true },
+      { key: "client_phone", label: "Client Phone", type: "phone", required: true },
+      { key: "state", label: "State", type: "select", required: true, options: "states" },
+      { key: "aor", label: "AOR", type: "yesno", required: true },
     ],
   },
   {
     title: "Lead & Calendar",
     fields: [
-      // No Sold Date question: the server dates the sale the day it's sent
-      { key: "Lead Source", name: "Lead Source", type: "select", required: true, options: OPTIONS.leadSources, w: 3 },
-      { key: "Calendar", name: "Calendar", type: "select", required: true, options: OPTIONS.calendars, w: 3 },
+      // No Sold Date question: the API dates the sale the day it's sent
+      { key: "lead_source", label: "Lead Source", type: "select", required: true, options: "leadSources" },
+      { key: "calendar", label: "Calendar", type: "select", required: true, options: "calendars" },
     ],
   },
   {
     title: "Sale Details",
     fields: [
+      { key: "replacement_sale", label: "Current Client Replacement Sale", type: "yesno", required: true },
       {
-        key: "Current Client Replacement Sale",
-        name: "Current Client Replacement Sale",
-        type: "radio",
-        required: true,
-        options: OPTIONS.yesNo,
-        w: 2,
-      },
-      // Previous Sold Product exists TWICE, as two separate inputs; at most one shows at a time (§6.4)
-      {
-        key: "Previous Sold Product#optional",
-        name: "Previous Sold Product",
+        key: "previous_sold_product",
+        label: "Previous Sold Product",
         type: "select",
         required: false,
-        options: OPTIONS.products,
-        w: 2,
-        showIf: "otherProductPicked",
+        options: "products",
+        showIf: "previousSoldProduct",
       },
       {
-        key: "Previous Sold Product#required",
-        name: "Previous Sold Product",
-        type: "select",
-        required: true,
-        options: OPTIONS.products,
-        w: 2,
-        showIf: "replacementYesAndNothingPicked",
-      },
-      {
-        key: "Prior MAPD/PDP Enrollment",
-        name: "Prior MAPD/PDP Enrollment",
-        type: "radio",
-        required: true,
-        options: OPTIONS.yesNo,
-        // Same row as Previous MAPD/PDP Product when Yes (like Replacement + Previous Sold Product)
-        w: 2,
+        key: "prior_mapd_pdp_enrollment",
         label: "Has this client ever enrolled in a MAPD or PDP through our office or any other agency?",
+        type: "yesno",
+        required: true,
       },
       {
-        key: "Previous MAPD/PDP Product",
-        name: "Previous MAPD/PDP Product",
+        key: "previous_mapd_pdp_product",
+        label: "Previous MAPD/PDP Product",
         type: "select",
         required: true,
-        options: ["MAPD", "PDP"],
-        w: 2,
+        options: "planProducts",
         showIf: "priorPlanYes",
       },
-      { key: "Product Sold", name: "Product Sold", type: "products", required: true, options: OPTIONS.products, w: 6 },
+      { key: "products", label: "Product Sold", type: "products", required: true },
       {
-        key: "Umbrella Product",
-        name: "Umbrella Product",
+        key: "umbrella",
+        label: "Did you sell an Umbrella Package?",
         type: "select",
         required: false,
-        options: OPTIONS.umbrella,
-        w: 2,
-        label: "Did you sell an Umbrella Package?",
+        options: "umbrellas",
       },
     ],
   },
 ];
+
+/** The choices a select offers, from the API's options. */
+export function optionList(options: SoldOptions, list: OptionList): { value: string; label: string }[] {
+  if (list === "states") return options.states.map((state) => ({ value: state.code, label: state.code }));
+  const values = list === "products" ? options.products.map((product) => product.name) : options[list];
+  return values.map((value) => ({ value, label: value }));
+}
+
+/** A product question's label, e.g. "SUP Premium". */
+export function productFieldLabel(product: string, field: ProductField): string {
+  switch (field) {
+    case "carrier":
+      return "Carrier";
+    case "premium":
+      return `${product} Premium`;
+    case "mbi":
+      return "Medicare Number (MBI)";
+    case "contract_number":
+      return "Contract Number";
+    case "sup_plan":
+      return "Sup Plan";
+    case "effective_date":
+      return "Effective Date";
+    case "pdf":
+      return `${product} PDF`;
+  }
+}
