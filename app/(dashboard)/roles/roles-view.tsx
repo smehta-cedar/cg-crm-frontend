@@ -10,7 +10,7 @@ import { StatusBadge, statusRank } from "@/components/status-badge";
 import type { ModuleOption, RoleRecord } from "@/lib/roles";
 import type { UserRecord } from "@/lib/users";
 import { deleteRole, saveRole } from "./actions";
-import { RoleDialog, type RoleEditor, type RoleValues } from "./role-dialog";
+import { isAgentRole, RoleDialog, type RoleEditor, type RoleValues } from "./role-dialog";
 
 /*
  * Roles table, for superusers only (the page redirects everyone else): what
@@ -38,9 +38,6 @@ type RoleRow = { role: RoleRecord };
 /** How many modules the role can at least view. */
 const moduleCount = (role: RoleRecord, modules: ModuleOption[]) =>
   modules.filter((module) => role.permissions[module.code]?.view).length;
-
-/** The built-in role every agent sign-in uses. */
-const isAgentRole = (role: RoleRecord) => role.builtIn && role.name.toLowerCase() === "agent";
 
 /*
  * Sort and search run in DataTable. The access and actions columns are added

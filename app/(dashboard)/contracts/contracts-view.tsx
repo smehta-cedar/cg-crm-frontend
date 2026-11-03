@@ -72,6 +72,8 @@ type ContractsViewProps = {
   agencyLicenseNumbers: Record<string, string>;
   /** The agency's licensed states; every other state is striped grey and can't be picked. Null strips nothing. */
   agencyLicensedStates: string[] | null;
+  /** An agent's own sign-in: the dialog locks Status (staff only). */
+  selfEdit?: boolean;
 };
 
 /** How the selected state's appointments are grouped. */
@@ -175,6 +177,7 @@ export function ContractsView({
   carriers,
   agencyLicenseNumbers,
   agencyLicensedStates,
+  selfEdit = false,
 }: ContractsViewProps) {
   // States the agency isn't licensed in: striped on the map, as on the agent profile.
   const agencyUnlicensed = agencyLicensedStates
@@ -772,6 +775,7 @@ export function ContractsView({
         editor={editor}
         agents={agents}
         carriers={carriers}
+        selfEdit={selfEdit}
         onSave={saveContract}
         onClose={() => setEditor(null)}
       />

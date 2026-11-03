@@ -32,8 +32,13 @@ const NO_ERRORS: LoginState = { fieldErrors: {}, error: null };
 
 /**
  * The visitor's IP, for the API's sign-in rate limit: the last X-Forwarded-For
- * entry, which the proxy in front of this server (or Next itself, with none)
- * added. Entries before it come from the browser and could be made up.
+ * entry, which the proxy in front of this server added. Entries before it come
+ * from the browser and could be made up.
+ *
+ * Next adds the header only when none came, so in production a proxy must
+ * sit in front and append the visitor's address (nginx with
+ * $proxy_add_x_forwarded_for, an AWS load balancer and Vercel all do).
+ * Reached directly, a browser could send a new made-up IP with each try.
  */
 async function visitorIp(): Promise<string | null> {
   const forwarded = (await headers()).get("x-forwarded-for") ?? "";

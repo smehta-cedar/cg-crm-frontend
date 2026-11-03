@@ -5,6 +5,7 @@ import { getAgents } from "@/lib/agents";
 import { allowForbidden } from "@/lib/api-server";
 import { getCarrierContracts } from "@/lib/carrier-contracts";
 import { getCarriers } from "@/lib/carriers";
+import { getSessionUser } from "@/lib/session";
 import { CarrierContractsView } from "./carrier-contracts-view";
 
 export const metadata: Metadata = {
@@ -13,11 +14,12 @@ export const metadata: Metadata = {
 
 export default async function ContractsByCarrierPage() {
   if (!(await canViewModule("contracts.by_carriers"))) return <NoAccess title="Contracts by carrier" />;
-  const [contracts, agents, carriers] = await Promise.all([
+  const [contracts, agents, carriers, user] = await Promise.all([
     getCarrierContracts(),
     // Other modules' lists: empty when the role can't read them.
     allowForbidden(getAgents()).then((list) => list ?? []),
     allowForbidden(getCarriers()).then((list) => list ?? []),
+    getSessionUser(),
   ]);
 
   return (
@@ -39,6 +41,7 @@ export default async function ContractsByCarrierPage() {
         availableStates,
         agentAccessible,
       }))}
+      selfEdit={Boolean(user?.agentId)}
     />
   );
 }

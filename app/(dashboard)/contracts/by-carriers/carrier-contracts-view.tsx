@@ -57,6 +57,8 @@ type CarrierContractsViewProps = {
   initialContracts: CarrierContractRecord[];
   agents: AgentOption[];
   carriers: CarrierOption[];
+  /** An agent's own sign-in: the dialog locks Status (staff only). */
+  selfEdit?: boolean;
 };
 
 /**
@@ -109,6 +111,7 @@ export function CarrierContractsView({
   initialContracts,
   agents,
   carriers,
+  selfEdit = false,
 }: CarrierContractsViewProps) {
   // Notes are written by the API on add and edit; the by-state page shows them.
   const { contracts, editor, setEditor, saveContract, agentName, carrierName } = useAppointments({
@@ -456,6 +459,7 @@ export function CarrierContractsView({
         editor={editor}
         agents={allAgents}
         carriers={carriers}
+        selfEdit={selfEdit}
         onSave={saveContract}
         onClose={() => setEditor(null)}
       />

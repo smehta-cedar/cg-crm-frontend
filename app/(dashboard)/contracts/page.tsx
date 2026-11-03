@@ -6,6 +6,7 @@ import { getAgents } from "@/lib/agents";
 import { allowForbidden } from "@/lib/api-server";
 import { getCarrierContractNotes, getCarrierContracts } from "@/lib/carrier-contracts";
 import { getCarriers } from "@/lib/carriers";
+import { getSessionUser } from "@/lib/session";
 import { ContractsView } from "./contracts-view";
 
 export const metadata: Metadata = {
@@ -14,13 +15,14 @@ export const metadata: Metadata = {
 
 export default async function ContractsPage() {
   if (!(await canViewModule("contracts.by_state"))) return <NoAccess title="Contracts" />;
-  const [contracts, notes, agents, carriers, agency] = await Promise.all([
+  const [contracts, notes, agents, carriers, agency, user] = await Promise.all([
     getCarrierContracts(),
     getCarrierContractNotes(),
     // Other modules' lists: empty (and no agency) when the role can't read them.
     allowForbidden(getAgents()).then((list) => list ?? []),
     allowForbidden(getCarriers()).then((list) => list ?? []),
     allowForbidden(getAgency()),
+    getSessionUser(),
   ]);
 
   // Where an agent can write needs both ceilings: their own licences and the
@@ -49,6 +51,7 @@ export default async function ContractsPage() {
       agencyLicenseNumbers={agency?.licenseNumbers ?? {}}
       // No agency record yet: nothing is striped.
       agencyLicensedStates={agency ? agency.licensedStates : null}
+      selfEdit={Boolean(user?.agentId)}
     />
   );
 }

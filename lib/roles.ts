@@ -25,8 +25,12 @@ export type PermissionFlags = Record<PermissionAction, boolean>;
 /** Module code -> flags. A module missing here has no access. */
 export type RolePermissions = Record<string, PermissionFlags>;
 
-/** A screen a role can be granted, as the API lists them: `code` is what a permission names. */
-export type ModuleOption = { code: string; label: string };
+/**
+ * A screen a role can be granted, as the API lists them: `code` is what a
+ * permission names. `agentActions` are the only ones the Agent role can hold:
+ * an agent's sign-in can't use any other, so the API refuses them.
+ */
+export type ModuleOption = { code: string; label: string; agentActions: PermissionAction[] };
 
 export type RoleRecord = {
   /** The API's UUID. */
@@ -106,5 +110,6 @@ export async function getRoles(): Promise<RoleRecord[]> {
 
 /** The modules a role can be granted, in menu order. Superusers only. */
 export async function getRoleModules(): Promise<ModuleOption[]> {
-  return apiGet<ModuleOption[]>("/roles/modules/");
+  const modules = await apiGet<{ code: string; label: string; agent_actions: PermissionAction[] }[]>("/roles/modules/");
+  return modules.map(({ code, label, agent_actions }) => ({ code, label, agentActions: agent_actions }));
 }

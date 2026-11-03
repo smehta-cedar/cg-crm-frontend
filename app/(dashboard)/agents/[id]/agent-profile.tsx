@@ -191,7 +191,10 @@ type AgentProfileProps = {
    * Null (no agency yet, or the role can't read it) disables nothing.
    */
   agencyLicensedStates?: string[] | null;
-  /** An agent viewing their own profile: licences are listed with no Add, Edit or Delete (staff only). */
+  /**
+   * An agent viewing their own profile: licences are listed with no Add, Edit or
+   * Delete, and contracts with no Delete or status change (staff only).
+   */
   selfEdit?: boolean;
 };
 
@@ -208,7 +211,7 @@ function useServerState<T>(initial: T) {
   return [value, setValue] as const;
 }
 
-/** A row's first cell: icon-only Edit and Delete buttons. */
+/** A row's first cell: icon-only Edit and Delete buttons. No `onDelete`, no Delete. */
 function RowActions({
   editLabel,
   onEdit,
@@ -218,7 +221,7 @@ function RowActions({
   editLabel: string;
   onEdit: () => void;
   deleteLabel: string;
-  onDelete: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <td className="whitespace-nowrap px-3 py-1.5 align-middle">
@@ -231,15 +234,17 @@ function RowActions({
       >
         <EditIcon className="size-3.5 shrink-0" />
       </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={deleteLabel}
-        title="Delete"
-        className={`inline-flex items-center ${ROW_BUTTON_CLASS} hover:text-danger`}
-      >
-        <DeleteIcon className="size-3.5 shrink-0" />
-      </button>
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={deleteLabel}
+          title="Delete"
+          className={`inline-flex items-center ${ROW_BUTTON_CLASS} hover:text-danger`}
+        >
+          <DeleteIcon className="size-3.5 shrink-0" />
+        </button>
+      ) : null}
     </td>
   );
 }
@@ -1079,10 +1084,14 @@ export function AgentProfile({
                           editLabel={`Edit the ${carrier.name} contract`}
                           onEdit={() => setEditor({ mode: "edit", contract: carrier.contract })}
                           deleteLabel={`Delete the ${carrier.name} contract`}
-                          onDelete={() =>
-                            void runDelete("Delete contract", `Delete the ${carrier.name} contract?`, () =>
-                              removeContract(carrier.contract.id),
-                            )
+                          // Only staff delete a contract.
+                          onDelete={
+                            selfEdit
+                              ? undefined
+                              : () =>
+                                  void runDelete("Delete contract", `Delete the ${carrier.name} contract?`, () =>
+                                    removeContract(carrier.contract.id),
+                                  )
                           }
                         />
                         <td className="min-w-0 truncate px-3 py-2.5 align-middle sm:whitespace-nowrap">
@@ -1360,6 +1369,7 @@ export function AgentProfile({
         ]}
         carriers={carriers}
         requireWritingNumber
+        selfEdit={selfEdit}
         onSave={saveContract}
         onClose={() => setEditor(null)}
       />

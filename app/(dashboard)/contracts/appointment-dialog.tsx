@@ -47,6 +47,9 @@ import { byName } from "@/lib/text";
  * `requireWritingNumber` (the agent profile) makes the writing number
  * mandatory while the status is Active; Applied, Pending and Inactive
  * contracts may leave it blank.
+ *
+ * `selfEdit` (an agent's own sign-in) locks Status: what they add starts
+ * Pending, and only staff change it. The API holds to the same.
  */
 
 type AgentOption = Pick<AgentRecord, "id" | "name" | "status" | "licensedStates">;
@@ -85,6 +88,8 @@ type AppointmentDialogProps = {
   carriers: CarrierOption[];
   /** Whether a contract can't be saved without a writing number. */
   requireWritingNumber?: boolean;
+  /** An agent's own sign-in: a new contract starts Pending and Status is locked (staff only). */
+  selfEdit?: boolean;
   /** Saves the values; resolves with an error to show instead of closing. */
   onSave: (values: AppointmentValues, editing?: CarrierContractRecord) => Promise<AppointmentError | null>;
   /** Runs for every close: Cancel or a save. */
@@ -96,6 +101,7 @@ export function AppointmentDialog({
   agents,
   carriers,
   requireWritingNumber = false,
+  selfEdit = false,
   onSave,
   onClose,
 }: AppointmentDialogProps) {
@@ -112,6 +118,7 @@ export function AppointmentDialog({
           agents={agents}
           carriers={carriers}
           requireWritingNumber={requireWritingNumber}
+          selfEdit={selfEdit}
           onSave={onSave}
           close={close}
         />
@@ -127,11 +134,20 @@ type AppointmentFormProps = Omit<AppointmentDialogProps, "editor" | "onClose"> &
 };
 
 /** The dialog's form. Mounted per open, so its state starts fresh each time. */
-function AppointmentForm({ id, editor, agents, carriers, requireWritingNumber, onSave, close }: AppointmentFormProps) {
+function AppointmentForm({
+  id,
+  editor,
+  agents,
+  carriers,
+  requireWritingNumber,
+  selfEdit,
+  onSave,
+  close,
+}: AppointmentFormProps) {
   const editing = editor.mode === "edit" ? editor.contract : undefined;
   const [error, setError] = useState<AppointmentError | null>(null);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<ContractStatus>(editing?.status ?? "active");
+  const [status, setStatus] = useState<ContractStatus>(editing?.status ?? (selfEdit ? "pending" : "active"));
   // Only an active contract must have its writing number.
   const writingNumberRequired = Boolean(requireWritingNumber) && status === "active";
   const carrierOptions = [...carriers]
@@ -311,11 +327,12 @@ function AppointmentForm({ id, editor, agents, carriers, requireWritingNumber, o
             id={`${id}-status`}
             name="status"
             value={status}
+            disabled={selfEdit}
             onChange={(event) => {
               setStatus(event.target.value as ContractStatus);
               setError(null);
             }}
-            className={INPUT_CLASS}
+            className={selfEdit ? `${INPUT_CLASS} cursor-not-allowed bg-surface-muted text-fg-muted` : INPUT_CLASS}
           >
             {CONTRACT_STATUSES.map((option) => (
               <option key={option} value={option}>

@@ -44,6 +44,8 @@ type HrViewProps = {
   licenses: AgentStateLicenseRecord[];
   /** "YYYY-MM-DD" from the server, so the first render agrees on the month. */
   today: string;
+  /** Staff who may decide requests get status dropdowns; everyone else sees the status as text. */
+  canDecide: boolean;
 };
 
 const STATUS_TEXT_CLASSES: Record<RequestStatus, string> = {
@@ -57,7 +59,7 @@ const STATUS_TEXT_CLASSES: Record<RequestStatus, string> = {
 const rangeText = (start: string, end: string) =>
   start === end ? formatLicenceDate(start) : `${formatLicenceDate(start)} – ${formatLicenceDate(end)}`;
 
-export function HrView({ licenses: initialLicenses, today: serverToday }: HrViewProps) {
+export function HrView({ licenses: initialLicenses, today: serverToday, canDecide }: HrViewProps) {
   const { requests, setStatus, statusError } = useRequestsStore();
   // Server today can be UTC; after mount, prefer the browser's local calendar day.
   const [today, setToday] = useState(serverToday);
@@ -216,25 +218,30 @@ export function HrView({ licenses: initialLicenses, today: serverToday }: HrView
       {
         id: "status",
         header: "Status",
-        cell: (request) => (
-          <select
-            value={request.status}
-            onChange={(event) => setStatus(request.id, event.target.value as RequestStatus)}
-            aria-label={`Status of ${personOf(request)}'s ${REQUEST_TYPE_LABELS[request.type].toLowerCase()} request`}
-            className={`${TOOLBAR_INPUT_CLASS} py-1 text-xs font-medium capitalize ${STATUS_TEXT_CLASSES[request.status]}`}
-          >
-            {REQUEST_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        ),
+        cell: (request) =>
+          canDecide ? (
+            <select
+              value={request.status}
+              onChange={(event) => setStatus(request.id, event.target.value as RequestStatus)}
+              aria-label={`Status of ${personOf(request)}'s ${REQUEST_TYPE_LABELS[request.type].toLowerCase()} request`}
+              className={`${TOOLBAR_INPUT_CLASS} py-1 text-xs font-medium capitalize ${STATUS_TEXT_CLASSES[request.status]}`}
+            >
+              {REQUEST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className={`text-xs font-medium capitalize ${STATUS_TEXT_CLASSES[request.status]}`}>
+              {request.status}
+            </span>
+          ),
         sortValue: (request) => REQUEST_STATUSES.indexOf(request.status),
         searchText: (request) => request.status,
       },
     ],
-    [setStatus],
+    [setStatus, canDecide],
   );
 
   return (
@@ -274,7 +281,7 @@ export function HrView({ licenses: initialLicenses, today: serverToday }: HrView
           detail: detailOf(request),
           status: request.status,
         }))}
-        onStatusChange={setStatus}
+        onStatusChange={canDecide ? setStatus : undefined}
         onLicenseStatusChange={setLicenseStatus}
       />
 

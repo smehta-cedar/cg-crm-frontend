@@ -22,6 +22,10 @@ import type {
  * checks view; unchecking view clears the row. A header checkbox sets a
  * whole column. Every role, Agent included, lists the sidebar links.
  *
+ * The Agent role holds only the boxes an agent's sign-in can use (each
+ * module's `agentActions`; the API refuses the rest). The others are greyed
+ * out, and the row switches and column boxes leave them off.
+ *
  * The view passes `onSave` and `onDelete`, which call the server actions
  * (./actions.ts) and update its own state. Delete asks once more inside the
  * dialog before it runs; the API refuses it while any user holds the role.
@@ -52,6 +56,16 @@ const FULL_ACCESS: PermissionFlags = { view: true, create: true, update: true, d
 const LOCKED_CLASS = "cursor-not-allowed bg-surface-muted text-fg-muted";
 
 const NO_ACCESS: PermissionFlags = { view: false, create: false, update: false, delete: false };
+
+/** The built-in role every agent sign-in uses. */
+export const isAgentRole = (role: RoleRecord) => role.builtIn && role.name.toLowerCase() === "agent";
+
+/** `flags` with every action the Agent role can't hold on `module` turned off. */
+function agentLimit(module: ModuleOption, flags: PermissionFlags): PermissionFlags {
+  const limited = { ...flags };
+  for (const action of PERMISSION_ACTIONS) limited[action] = flags[action] && module.agentActions.includes(action);
+  return limited;
+}
 
 type RoleDialogProps = {
   /** Null keeps the dialog closed. */
@@ -89,7 +103,10 @@ type RoleFormProps = Pick<RoleDialogProps, "onSave" | "onDelete" | "modules"> & 
 /** Every module with the flags the role holds, or none. */
 function initialPermissions(modules: ModuleOption[], role?: RoleRecord): RolePermissions {
   const permissions: RolePermissions = {};
-  for (const module of modules) permissions[module.code] = { ...(role?.permissions[module.code] ?? NO_ACCESS) };
+  for (const module of modules) {
+    const flags = { ...(role?.permissions[module.code] ?? NO_ACCESS) };
+    permissions[module.code] = role && isAgentRole(role) ? agentLimit(module, flags) : flags;
+  }
   return permissions;
 }
 
@@ -97,6 +114,11 @@ function initialPermissions(modules: ModuleOption[], role?: RoleRecord): RolePer
 function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProps) {
   const editing = editor.mode === "edit" ? editor.role : undefined;
   const builtIn = editing?.builtIn ?? false;
+  const agentRole = editing ? isAgentRole(editing) : false;
+  /** Whether the role can hold `action` on `module`; only the Agent role is limited. */
+  const allows = (module: ModuleOption, action: PermissionAction) =>
+    !agentRole || module.agentActions.includes(action);
+  const limit = (module: ModuleOption, flags: PermissionFlags) => (agentRole ? agentLimit(module, flags) : flags);
   const [permissions, setPermissions] = useState(() => initialPermissions(modules, editing));
   const [error, setError] = useState<RoleError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -111,26 +133,30 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
   const formError = messageFor("form") ?? messageFor("status");
 
   /** Sets one flag, keeping the rule that create, update and delete need view. */
-  const setFlag = (module: string, action: PermissionAction, checked: boolean) => {
+  const setFlag = (module: ModuleOption, action: PermissionAction, checked: boolean) => {
     clear();
     setPermissions((current) => {
-      const flags = { ...current[module] };
+      const flags = { ...current[module.code] };
       if (action === "view" && !checked) {
-        return { ...current, [module]: { ...NO_ACCESS } };
+        return { ...current, [module.code]: { ...NO_ACCESS } };
       }
       flags[action] = checked;
       if (checked) flags.view = true;
-      return { ...current, [module]: flags };
+      return { ...current, [module.code]: limit(module, flags) };
     });
   };
 
   /** The row's switch: every action on, or none. */
-  const setRow = (module: string, on: boolean) => {
+  const setRow = (module: ModuleOption, on: boolean) => {
     clear();
-    setPermissions((current) => ({ ...current, [module]: { ...(on ? FULL_ACCESS : NO_ACCESS) } }));
+    setPermissions((current) => ({ ...current, [module.code]: limit(module, on ? FULL_ACCESS : NO_ACCESS) }));
   };
 
-  const rowOn = (module: string) => PERMISSION_ACTIONS.every((action) => permissions[module]?.[action]);
+  /** On when every action the role can hold here is checked. */
+  const rowOn = (module: ModuleOption) => {
+    const actions = PERMISSION_ACTIONS.filter((action) => allows(module, action));
+    return actions.length > 0 && actions.every((action) => permissions[module.code]?.[action]);
+  };
 
   /** Sets one action for every row, with the same view rule. */
   const setColumn = (action: PermissionAction, checked: boolean) => {
@@ -145,14 +171,16 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
         }
         flags[action] = checked;
         if (checked) flags.view = true;
-        next[module.code] = flags;
+        next[module.code] = limit(module, flags);
       }
       return next;
     });
   };
 
-  const columnChecked = (action: PermissionAction) =>
-    modules.length > 0 && modules.every((module) => permissions[module.code]?.[action]);
+  const columnChecked = (action: PermissionAction) => {
+    const open = modules.filter((module) => allows(module, action));
+    return open.length > 0 && open.every((module) => permissions[module.code]?.[action]);
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -282,9 +310,10 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
                 <tr key={module.code} className="border-t border-line">
                   <td className="px-3 py-2">
                     <Switch
-                      checked={rowOn(module.code)}
+                      checked={rowOn(module)}
+                      disabled={!allows(module, "view")}
                       label={`All permissions for ${module.label}`}
-                      onChange={(on) => setRow(module.code, on)}
+                      onChange={(on) => setRow(module, on)}
                     />
                   </td>
                   <th scope="row" className="px-3 py-2 text-left font-normal text-fg">
@@ -296,8 +325,9 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
                         type="checkbox"
                         aria-label={`${ACTION_LABELS[action]} ${module.label}`}
                         checked={permissions[module.code]?.[action] ?? false}
-                        onChange={(event) => setFlag(module.code, action, event.currentTarget.checked)}
-                        className="size-4 rounded border-line-strong accent-brand-strong"
+                        disabled={!allows(module, action)}
+                        onChange={(event) => setFlag(module, action, event.currentTarget.checked)}
+                        className="size-4 rounded border-line-strong accent-brand-strong disabled:cursor-not-allowed disabled:opacity-40"
                       />
                     </td>
                   ))}
@@ -348,15 +378,26 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
 }
 
 /** An on/off slider; on is the brand colour. */
-function Switch({ checked, label, onChange }: { checked: boolean; label: string; onChange: (on: boolean) => void }) {
+function Switch({
+  checked,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: (on: boolean) => void;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40 ${
         checked ? "bg-brand-strong" : "bg-line-strong"
       }`}
     >
