@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { longDateLabel } from "@/lib/calendar";
 import type { ClickType, TrackerBoard } from "@/lib/tracker";
-import { logClick } from "./actions";
+import { logClick, refreshBoard } from "./actions";
+
+/** How often the board is fetched again, so other setters' taps show up. */
+const REFRESH_MS = 30_000;
 
 /** The API's booking rate (a percent, or null before anything is answered) as shown. */
 const formatRate = (rate: number | null) => (rate === null ? "—" : `${rate.toFixed(1)}%`);
@@ -71,12 +74,23 @@ function ClickButton({
 /**
  * Click panel. Every tap is saved by the API, which answers with today's
  * board; this only shows it. A setter sees their own numbers and the
- * buttons, anyone else the team's.
+ * buttons, anyone else the team's. The board is fetched again every 30
+ * seconds while the tab is open in front.
  */
 export function TrackerView({ board: initialBoard, name }: { board: TrackerBoard; name: string }) {
   const [board, setBoard] = useState(initialBoard);
   const [error, setError] = useState<string | null>(null);
   const counts = board.me ?? board.team;
+
+  useEffect(() => {
+    // Server actions run one at a time, so a refresh never lands out of order with a tap.
+    const timer = setInterval(async () => {
+      if (document.hidden) return;
+      const latest = await refreshBoard();
+      if (latest) setBoard(latest);
+    }, REFRESH_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   const click = async (type: ClickType) => {
     const result = await logClick(type);

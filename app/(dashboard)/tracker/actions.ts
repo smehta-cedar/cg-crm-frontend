@@ -1,9 +1,10 @@
 "use server";
 
 /*
- * Logs a click on the Click panel, run on the Next server so the access token
- * stays in its HttpOnly cookie. POST /tracker/clicks/ answers with today's
- * board, which the panel shows as it comes. A 401 sends the user to sign in.
+ * The Click panel's calls, run on the Next server so the access token stays
+ * in its HttpOnly cookie. POST /tracker/clicks/ logs a tap and answers with
+ * today's board, which the panel shows as it comes; GET /tracker/today/ is
+ * its 30-second refresh. A 401 sends the user to sign in.
  */
 
 import { redirect } from "next/navigation";
@@ -24,4 +25,14 @@ export async function logClick(type: ClickType): Promise<LogClickResult> {
     return { ok: false, message: result.message };
   }
   return { ok: true, board: toTrackerBoard(result.data) };
+}
+
+/** Today's board as it stands, or null when it can't be read (the panel keeps what it shows). */
+export async function refreshBoard(): Promise<TrackerBoard | null> {
+  const result = await apiFetch<ApiTrackerBoard>("/tracker/today/");
+  if (!result.ok) {
+    if (result.status === 401) redirect("/login");
+    return null;
+  }
+  return toTrackerBoard(result.data);
 }
