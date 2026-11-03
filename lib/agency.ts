@@ -235,6 +235,8 @@ export type AgencyComment = {
   /** Who wrote it; null when that user is gone. */
   createdBy: string | null;
   createdAt: string;
+  /** Whether the signed-in user may delete it: its author or a superuser. */
+  canDelete: boolean;
 };
 
 /** A written note as the API serialises it (AgencyCommentSerializer). */
@@ -244,10 +246,17 @@ export type ApiAgencyComment = {
   body: string;
   created_by: string | null;
   created_at: string;
+  can_delete: boolean;
 };
 
 export function toAgencyComment(comment: ApiAgencyComment): AgencyComment {
-  return { id: comment.id, body: comment.body, createdBy: comment.created_by, createdAt: comment.created_at };
+  return {
+    id: comment.id,
+    body: comment.body,
+    createdBy: comment.created_by,
+    createdAt: comment.created_at,
+    canDelete: comment.can_delete,
+  };
 }
 
 /** The agency's written notes, newest first. */

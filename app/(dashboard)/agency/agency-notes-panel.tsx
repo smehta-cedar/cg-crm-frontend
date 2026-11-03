@@ -11,7 +11,8 @@ import { addAgencyComment, deleteAgencyComment } from "./comment-actions";
  * The agency profile's Notes panel: notes people write on the agency, newest
  * first, each with who wrote it and when. Not the change log, which is the
  * History panel. With `canWrite` (the role can edit agencies) a box at the
- * top adds a note and each note can be deleted, behind a confirm. Times are
+ * top adds a note, and a note its writer (or a superuser) sees can be
+ * deleted, behind a confirm. Times are
  * shown in the browser's time zone, so they render after hydration.
  */
 
@@ -117,7 +118,7 @@ export function AgencyNotesPanel({ agencyId, initialComments, canWrite, classNam
                     </>
                   ) : null}
                 </p>
-                {canWrite ? (
+                {canWrite && comment.canDelete ? (
                   <button
                     type="button"
                     onClick={() => setDeleting(comment)}

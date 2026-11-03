@@ -6,6 +6,7 @@ import {
   INPUT_CLASS,
   PRIMARY_BUTTON_CLASS,
   ROW_BUTTON_CLASS,
+  SELF_EDIT_LOCKED_CLASS,
   TOOLBAR_INPUT_CLASS,
 } from "@/components/classes";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -565,7 +566,8 @@ export function ProducerForm<E extends object = Record<never, never>>({
           aria-invalid={showError ? true : undefined}
           aria-describedby={showError ? `${id}-name-error` : undefined}
           onChange={() => setNameError(null)}
-          className={INPUT_CLASS}
+          readOnly={selfEdit}
+          className={selfEdit ? `${INPUT_CLASS} ${SELF_EDIT_LOCKED_CLASS}` : INPUT_CLASS}
         />
       </Field>
     );
@@ -622,7 +624,8 @@ export function ProducerForm<E extends object = Record<never, never>>({
           aria-invalid={npnError ? true : undefined}
           aria-describedby={npnError ? `${id}-npn-error` : undefined}
           onChange={() => setNpnError(null)}
-          className={INPUT_CLASS}
+          readOnly={selfEdit}
+          className={selfEdit ? `${INPUT_CLASS} ${SELF_EDIT_LOCKED_CLASS}` : INPUT_CLASS}
         />
       </Field>
       <Field
@@ -638,7 +641,8 @@ export function ProducerForm<E extends object = Record<never, never>>({
           autoComplete="off"
           aria-describedby={`${id}-aliases-hint`}
           defaultValue={initial?.aliases.join(", ")}
-          className={INPUT_CLASS}
+          readOnly={selfEdit}
+          className={selfEdit ? `${INPUT_CLASS} ${SELF_EDIT_LOCKED_CLASS}` : INPUT_CLASS}
         />
       </Field>
     </FormSection>
@@ -659,7 +663,7 @@ export function ProducerForm<E extends object = Record<never, never>>({
           autoComplete="off"
           defaultValue={initial?.email}
           readOnly={selfEdit}
-          className={selfEdit ? `${INPUT_CLASS} cursor-not-allowed bg-surface-muted text-fg-muted` : INPUT_CLASS}
+          className={selfEdit ? `${INPUT_CLASS} ${SELF_EDIT_LOCKED_CLASS}` : INPUT_CLASS}
         />
       </Field>
       <Field label="Phone" required htmlFor={`${id}-phone`} className={span.field}>

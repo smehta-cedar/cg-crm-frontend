@@ -172,10 +172,12 @@ export type ApiAgent = {
   personal_email: string;
   personal_phone: string;
   address: Address | null;
-  date_of_birth: string | null;
+  /** Only on one agent's own read (GET /agents/{id}/); lists leave it out. */
+  date_of_birth?: string | null;
   join_date: string | null;
   start_date: string | null;
-  ssn_last4: string;
+  /** Only on one agent's own read, like date_of_birth. */
+  ssn_last4?: string;
   remarks: string;
   licenses: ApiAgentLicense[];
   status: string;

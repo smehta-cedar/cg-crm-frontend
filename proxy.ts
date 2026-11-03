@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { apiRequest, type TokenPair } from "@/lib/api";
 import { ACCESS_COOKIE, REFRESH_COOKIE, clearAuthCookies, setAuthCookies } from "@/lib/auth-cookies";
@@ -15,12 +16,16 @@ import { jwtExpiresWithin } from "@/lib/jwt";
  * once (a navigation plus its prefetches), each carrying the same old
  * refresh token; only the first may hit the API. `rotations` dedupes them:
  * every request with the same old token awaits the same promise, and the
- * result is kept for a minute for a straggler that left before the browser
- * stored the new cookies.
+ * result is kept a few seconds for a straggler that left before the browser
+ * stored the new cookies. Only that long: anyone holding the old token gets
+ * the new pair while it lasts. Keyed by a hash, so the map never holds a
+ * token that could be refreshed, and capped, oldest out first.
  *
  * Refresh failures: a definite rejection (401) clears both cookies so the
- * dashboard gate sends the visitor to sign in; a network failure leaves them
- * alone and lets the page decide.
+ * dashboard gate sends the visitor to sign in; so does a refresh token that
+ * has already expired, without asking the API. A network failure leaves them
+ * alone and lets the page decide. The API rate-limits refreshes per visitor,
+ * so the visitor's IP goes along.
  *
  * Nothing here decides who may see what; the dashboard layout does that with
  * getSessionUser(). This only makes sure the token it reads is fresh.
@@ -29,25 +34,30 @@ import { jwtExpiresWithin } from "@/lib/jwt";
 /** Refresh when the access token has less than this left, so a render never straddles its expiry. */
 const REFRESH_AHEAD_MS = 60 * 1000;
 /** How long a finished rotation stays answerable for late requests carrying the old token. */
-const ROTATION_TTL_MS = 60 * 1000;
+const ROTATION_TTL_MS = 5 * 1000;
+/** Most rotations kept at once. */
+const MAX_ROTATIONS = 1000;
 
 type Rotation = { ok: true; tokens: TokenPair } | { ok: false; definite: boolean };
 
 const rotations = new Map<string, Promise<Rotation>>();
 
-function rotate(refresh: string): Promise<Rotation> {
-  const pending = rotations.get(refresh);
+function rotate(refresh: string, visitorIp: string | null): Promise<Rotation> {
+  const key = createHash("sha256").update(refresh).digest("hex");
+  const pending = rotations.get(key);
   if (pending) return pending;
 
-  const promise = apiRequest<TokenPair>("/auth/refresh/", { method: "POST", body: { refresh } }).then(
+  const promise = apiRequest<TokenPair>("/auth/refresh/", { method: "POST", body: { refresh }, visitorIp }).then(
     (result): Rotation => {
       if (result.ok) return { ok: true, tokens: result.data };
       // 401 = the API refused the token (expired, blacklisted, user gone). Anything else is not its verdict.
       return { ok: false, definite: result.status === 401 };
     },
   );
-  rotations.set(refresh, promise);
-  setTimeout(() => rotations.delete(refresh), ROTATION_TTL_MS);
+  // A Map keeps insertion order, so the first key is the oldest.
+  if (rotations.size >= MAX_ROTATIONS) rotations.delete(rotations.keys().next().value!);
+  rotations.set(key, promise);
+  setTimeout(() => rotations.delete(key), ROTATION_TTL_MS);
   return promise;
 }
 
@@ -76,7 +86,11 @@ export async function proxy(request: NextRequest) {
   const fresh = access !== undefined && !jwtExpiresWithin(access, REFRESH_AHEAD_MS);
   if (fresh || !refresh) return pass();
 
-  const rotation = await rotate(refresh);
+  // Read the way visitorIp() in app/login/actions.ts reads it.
+  const visitorIp = request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() || null;
+  const rotation: Rotation = jwtExpiresWithin(refresh, 0)
+    ? { ok: false, definite: true }
+    : await rotate(refresh, visitorIp);
 
   if (rotation.ok) {
     // The forwarded request carries the new cookies, so cookies() downstream reads them.

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { NoAccess } from "@/components/no-access";
-import { canViewModule } from "@/lib/access";
+import { canModule, canViewModule } from "@/lib/access";
 import { getAgency } from "@/lib/agency";
 import { getAgents } from "@/lib/agents";
 import { allowForbidden } from "@/lib/api-server";
@@ -22,7 +22,7 @@ export default async function PasswordsPage() {
   // render them on the client instead.
   await connection();
 
-  const [passwords, sitePasswords, sites, agencyRecord, agents, carriers] = await Promise.all([
+  const [passwords, sitePasswords, sites, agencyRecord, agents, carriers, canCreate, canUpdate, canDelete] = await Promise.all([
     getPasswords(),
     getSitePasswords(),
     // For the Add site password popup's Site select.
@@ -31,6 +31,10 @@ export default async function PasswordsPage() {
     // The filters' agents and carriers: empty when the role can't read them.
     allowForbidden(getAgents()).then((list) => list ?? []),
     allowForbidden(getCarriers()).then((list) => list ?? []),
+    // Which of Add, Edit and Delete to show.
+    canModule("passwords", "create"),
+    canModule("passwords", "update"),
+    canModule("passwords", "delete"),
   ]);
   // The agency, for its own passwords. A role that can't read the agency still
   // gets it from an agency password it can see.
@@ -49,6 +53,9 @@ export default async function PasswordsPage() {
       agency={agency}
       agents={agents.map(({ id, name, status }) => ({ id, name, status }))}
       carriers={carriers.map(({ id, name, status, agentAccessible }) => ({ id, name, status, agentAccessible }))}
+      canCreate={canCreate}
+      canUpdate={canUpdate}
+      canDelete={canDelete}
     />
   );
 }

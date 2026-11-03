@@ -31,6 +31,10 @@ type UsersViewProps = {
   roles: RoleOption[];
   /** Only a superuser can change anyone's roles. */
   canAssignRoles: boolean;
+  /** Show Add user. */
+  canCreate: boolean;
+  /** Show each row's Edit. */
+  canUpdate: boolean;
 };
 
 /** A table row. Wrapped so a column can be added later without renaming fields. */
@@ -106,7 +110,7 @@ const COLUMNS: DataTableColumn<UserRow>[] = [
   },
 ];
 
-export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersViewProps) {
+export function UsersView({ initialUsers, notes, roles, canAssignRoles, canCreate, canUpdate }: UsersViewProps) {
   const [users, setUsers] = useState(initialUsers);
   const [editor, setEditor] = useState<UserEditor | null>(null);
 
@@ -116,23 +120,27 @@ export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersV
 
   const columns = useMemo<DataTableColumn<UserRow>[]>(
     () => [
-      {
-        id: "actions",
-        header: "Action",
-        cell: ({ user }) => (
-          <button
-            type="button"
-            onClick={() => setEditor({ mode: "edit", user })}
-            className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
-          >
-            <EditIcon className="size-3.5 shrink-0" />
-            <span className="sr-only"> {user.name}</span>
-          </button>
-        ),
-      },
+      ...(canUpdate
+        ? [
+            {
+              id: "actions",
+              header: "Action",
+              cell: ({ user }: UserRow) => (
+                <button
+                  type="button"
+                  onClick={() => setEditor({ mode: "edit", user })}
+                  className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
+                >
+                  <EditIcon className="size-3.5 shrink-0" />
+                  <span className="sr-only"> {user.name}</span>
+                </button>
+              ),
+            },
+          ]
+        : []),
       ...COLUMNS,
     ],
-    [],
+    [canUpdate],
   );
 
   /** Adds or edits a user through the API. Resolves with the dialog's error, if any. */
@@ -148,11 +156,11 @@ export function UsersView({ initialUsers, notes, roles, canAssignRoles }: UsersV
     return null;
   };
 
-  const addButton = (
+  const addButton = canCreate ? (
     <button type="button" onClick={() => setEditor({ mode: "add" })} className={PRIMARY_BUTTON_CLASS}>
       Add user
     </button>
-  );
+  ) : null;
 
   return (
     <>

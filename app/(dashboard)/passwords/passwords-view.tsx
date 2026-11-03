@@ -32,7 +32,8 @@ import { deleteSitePassword } from "./site-actions";
  * (./password-dialog.tsx), started on that table's filtered agent and
  * carrier / site; a row's Edit opens the same popup filled in from that
  * password. The page refreshes after a save. Either kind can be deleted
- * here, after a confirmation; a failure shows above the panels.
+ * here, after a confirmation; a failure shows above the panels. Add, Edit
+ * and Delete show only when the role allows them.
  *
  * Both agent filters start on the agency (All agents when there is none).
  * The filters live in the URL (carrier table: ?agent= and ?carrier=; site
@@ -50,6 +51,9 @@ type PasswordsViewProps = {
   agency: AgencyOption | null;
   agents: AgentOption[];
   carriers: CarrierOption[];
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 };
 
 /** The agent filter's value for the agency's own passwords. */
@@ -73,7 +77,17 @@ const byPartyThen =
     a.agentName.localeCompare(b.agentName) ||
     place(a).localeCompare(place(b), undefined, { sensitivity: "base" });
 
-export function PasswordsView({ passwords, sitePasswords, sites, agency, agents, carriers }: PasswordsViewProps) {
+export function PasswordsView({
+  passwords,
+  sitePasswords,
+  sites,
+  agency,
+  agents,
+  carriers,
+  canCreate,
+  canUpdate,
+  canDelete,
+}: PasswordsViewProps) {
   const id = useId();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -183,6 +197,7 @@ export function PasswordsView({ passwords, sitePasswords, sites, agency, agents,
 
   // Add starts on the table's filtered agent, and carrier or site.
   const addButton = (kind: AddPasswordEditor["kind"], label: string) => {
+    if (!canCreate) return null;
     const tableAgent = kind === "carrier" ? agentFilter : siteAgentFilter;
     return (
       <button
@@ -281,8 +296,8 @@ export function PasswordsView({ passwords, sitePasswords, sites, agency, agents,
               passwords={carrierRows}
               aligned
               saveAs="passwords"
-              onEdit={editCarrierPassword}
-              onDelete={removeCarrierPassword}
+              onEdit={canUpdate ? editCarrierPassword : undefined}
+              onDelete={canDelete ? removeCarrierPassword : undefined}
               emptyMessage={emptyFor("No passwords", agentFilter, carrierFilter && carrierName(carrierFilter))}
             />
           )}
@@ -324,8 +339,8 @@ export function PasswordsView({ passwords, sitePasswords, sites, agency, agents,
               passwords={siteRows}
               aligned
               saveAs="site-passwords"
-              onEdit={editSitePassword}
-              onDelete={removeSitePassword}
+              onEdit={canUpdate ? editSitePassword : undefined}
+              onDelete={canDelete ? removeSitePassword : undefined}
               emptyMessage={emptyFor("No site passwords", siteAgentFilter, siteFilter && siteName(siteFilter))}
             />
           )}

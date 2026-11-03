@@ -159,7 +159,7 @@ export function AgentForm({
       submitLabel={editing ? "Save changes" : "Add agent"}
       labels={FORM_LABELS}
       initial={editing}
-      extra={agentContactExtra(editing)}
+      extra={agentContactExtra(editing, selfEdit)}
       lines
       dates
       onSave={(values) => checkAgentValues(values) ?? onSave(values)}

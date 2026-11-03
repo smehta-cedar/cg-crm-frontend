@@ -43,7 +43,7 @@ type ApiRequestOptions = {
   body?: unknown;
   /** Bearer access token for endpoints that need a signed-in user. */
   token?: string | null;
-  /** The visitor's IP, for the API's sign-in rate limit; see visitorIp() in app/login/actions.ts. */
+  /** The visitor's IP, for the API's sign-in and refresh rate limits; see visitorIp() in app/login/actions.ts. */
   visitorIp?: string | null;
 };
 

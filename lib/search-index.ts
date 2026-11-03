@@ -6,11 +6,12 @@ import "server-only";
  * navbar, which matches it as the user types. Each entry's text mirrors its
  * list table's `searchText` columns, so the suggestions and the table agree.
  *
- * Everything here reaches the browser: portal and user passwords stay out,
- * the same way their table columns have no `searchText`.
+ * Everything here reaches the browser on every dashboard page, so it holds
+ * less than the tables search: no passwords, and no agent's personal email,
+ * personal phone or home address, nor any portal username. Those are found
+ * on the Agents and Passwords pages themselves.
  */
 
-import { formatAddress } from "@/lib/address";
 import { getAgents } from "@/lib/agents";
 import { allowForbidden } from "@/lib/api-server";
 import { getCarrierContracts } from "@/lib/carrier-contracts";
@@ -63,10 +64,6 @@ export async function getSearchIndex(): Promise<SearchIndex> {
           agent.email,
           agent.phone,
           phoneDigits(agent.phone),
-          agent.personalEmail ?? "",
-          agent.personalPhone ?? "",
-          phoneDigits(agent.personalPhone ?? ""),
-          formatAddress(agent.address),
         ],
       ),
     ),
@@ -95,8 +92,8 @@ export async function getSearchIndex(): Promise<SearchIndex> {
         return entry(
           listHref("/passwords", agent, carrier),
           agent,
-          [carrier, password.username],
-          [agent, carrier, password.username, password.status],
+          [carrier],
+          [agent, carrier, password.status],
         );
       }),
       // Site passwords match on the site's name, the way carrier ones match on the carrier.
@@ -104,8 +101,8 @@ export async function getSearchIndex(): Promise<SearchIndex> {
         entry(
           listHref("/passwords", password.agentName, password.siteName),
           password.agentName,
-          [password.siteName, password.username],
-          [password.agentName, password.siteName, password.username, password.status],
+          [password.siteName],
+          [password.agentName, password.siteName, password.status],
         ),
       ),
     ],

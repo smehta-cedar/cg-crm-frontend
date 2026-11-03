@@ -17,6 +17,9 @@ export const GHOST_BUTTON_CLASS =
 export const ROW_BUTTON_CLASS =
   "rounded-md px-2 py-1 text-sm font-medium text-fg-muted hover:bg-surface-hover hover:text-fg";
 
+/** Added to INPUT_CLASS for a field an agent sees on its own form but only staff may change. */
+export const SELF_EDIT_LOCKED_CLASS = "cursor-not-allowed bg-surface-muted text-fg-muted";
+
 /** INPUT_CLASS without the top margin and full width, for search boxes and filters above a table. */
 export const TOOLBAR_INPUT_CLASS =
   "block rounded-md border border-line-strong bg-surface px-3 py-2 text-sm text-fg focus:border-brand-strong focus:outline-none focus:ring-1 focus:ring-brand-strong";

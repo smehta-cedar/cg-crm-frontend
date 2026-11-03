@@ -1,6 +1,6 @@
 "use client";
 
-import { INPUT_CLASS } from "@/components/classes";
+import { INPUT_CLASS, SELF_EDIT_LOCKED_CLASS } from "@/components/classes";
 import { PasswordInput } from "@/components/credential-value";
 import { Field } from "@/components/field";
 import type { ProducerError, ProducerExtra } from "@/components/producer-form";
@@ -26,6 +26,10 @@ import { formatPhone } from "@/lib/phone";
  * date, start date (employment, not a licence's) and the SSN's last four
  * digits, typed into a masked input like a password. Then free-text notes
  * (`remarks`) across the full width.
+ *
+ * On an agent's own form (`selfEdit`) the join and start dates are
+ * read-only and the notes are left out: both are staff records, and the API
+ * neither shows an agent its remarks nor takes a change to them.
  */
 
 /** The section's fields, as AgentRecord holds them. */
@@ -80,7 +84,8 @@ export const agentContactNoteValues = (values: AgentContact) => ({
 });
 
 /** The form section the agent dialog hands to ProducerForm. */
-export function agentContactExtra(initial?: AgentContact): ProducerExtra<AgentContact> {
+export function agentContactExtra(initial?: AgentContact, selfEdit = false): ProducerExtra<AgentContact> {
+  const dateClass = selfEdit ? `${INPUT_CLASS} ${SELF_EDIT_LOCKED_CLASS}` : INPUT_CLASS;
   return {
     read: readAgentContact,
     render: ({ id, error, clearError, span }) => {
@@ -192,7 +197,8 @@ export function agentContactExtra(initial?: AgentContact): ProducerExtra<AgentCo
               type="date"
               autoComplete="off"
               defaultValue={initial?.joinDate}
-              className={INPUT_CLASS}
+              readOnly={selfEdit}
+              className={dateClass}
             />
           </Field>
           <Field label="Start date" htmlFor={`${id}-start-date`} className={span.field}>
@@ -202,7 +208,8 @@ export function agentContactExtra(initial?: AgentContact): ProducerExtra<AgentCo
               type="date"
               autoComplete="off"
               defaultValue={initial?.startDate}
-              className={INPUT_CLASS}
+              readOnly={selfEdit}
+              className={dateClass}
             />
           </Field>
           <Field label="SSN" htmlFor={`${id}-ssn-last4`} className={span.field}>
@@ -219,16 +226,18 @@ export function agentContactExtra(initial?: AgentContact): ProducerExtra<AgentCo
               className={INPUT_CLASS}
             />
           </Field>
-          <Field label="Notes" htmlFor={`${id}-remarks`} className={span.full}>
-            <textarea
-              id={`${id}-remarks`}
-              name="remarks"
-              rows={4}
-              autoComplete="off"
-              defaultValue={initial?.remarks}
-              className={INPUT_CLASS}
-            />
-          </Field>
+          {selfEdit ? null : (
+            <Field label="Notes" htmlFor={`${id}-remarks`} className={span.full}>
+              <textarea
+                id={`${id}-remarks`}
+                name="remarks"
+                rows={4}
+                autoComplete="off"
+                defaultValue={initial?.remarks}
+                className={INPUT_CLASS}
+              />
+            </Field>
+          )}
         </>
       );
     },

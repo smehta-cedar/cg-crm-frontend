@@ -29,35 +29,41 @@ import {
  * clicking a name expands the row to show its change notes. Add product and
  * a row's Edit open the shared ProductDialog; saves go to the API through
  * the saveProduct server action, which records the notes and refreshes the
- * shop.
+ * shop. Add and Edit show only when the role allows them.
  */
 
 type StorefrontViewProps = {
   initialProducts: ProductRecord[];
   /** Every product's notes, newest first. */
   notes: ProductNote[];
+  canCreate: boolean;
+  canUpdate: boolean;
 };
 
-export function StorefrontView({ initialProducts, notes }: StorefrontViewProps) {
+export function StorefrontView({ initialProducts, notes, canCreate, canUpdate }: StorefrontViewProps) {
   const [products, setProducts] = useState(initialProducts);
   const [editor, setEditor] = useState<ProductEditor | null>(null);
 
   const columns = useMemo<DataTableColumn<ProductRecord>[]>(
     () => [
-      {
-        id: "actions",
-        header: "Action",
-        cell: (product) => (
-          <button
-            type="button"
-            onClick={() => setEditor({ mode: "edit", product })}
-            className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
-          >
-            <EditIcon className="size-3.5 shrink-0" />
-            <span className="sr-only"> {product.name}</span>
-          </button>
-        ),
-      },
+      ...(canUpdate
+        ? [
+            {
+              id: "actions",
+              header: "Action",
+              cell: (product: ProductRecord) => (
+                <button
+                  type="button"
+                  onClick={() => setEditor({ mode: "edit", product })}
+                  className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
+                >
+                  <EditIcon className="size-3.5 shrink-0" />
+                  <span className="sr-only"> {product.name}</span>
+                </button>
+              ),
+            },
+          ]
+        : []),
       {
         id: "picture",
         header: "Picture",
@@ -177,7 +183,7 @@ export function StorefrontView({ initialProducts, notes }: StorefrontViewProps) 
         searchText: (product) => product.status,
       },
     ],
-    [],
+    [canUpdate],
   );
 
   /** Adds or edits a product through the API. Resolves with the dialog's errors, if any. */
@@ -192,11 +198,11 @@ export function StorefrontView({ initialProducts, notes }: StorefrontViewProps) 
     return [];
   };
 
-  const addButton = (
+  const addButton = canCreate ? (
     <button type="button" onClick={() => setEditor({ mode: "add" })} className={PRIMARY_BUTTON_CLASS}>
       Add product
     </button>
-  );
+  ) : null;
 
   return (
     <>

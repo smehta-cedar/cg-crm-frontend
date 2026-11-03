@@ -22,31 +22,38 @@ import { US_STATE_NAMES, stateSummary } from "@/lib/us-states";
  * being the agent's own licensedStates.
  *
  * The list is server-loaded; the save action revalidates it, so coming back
- * from the form page shows the change.
+ * from the form page shows the change. Add and Edit show only when the role
+ * allows them.
  */
 
 type CarriersViewProps = {
   carriers: CarrierRecord[];
+  canCreate: boolean;
+  canUpdate: boolean;
 };
 
-export function CarriersView({ carriers }: CarriersViewProps) {
+export function CarriersView({ carriers, canCreate, canUpdate }: CarriersViewProps) {
   // Sort and search run in DataTable. Search covers aliases, so a carrier can be
   // found by any name it appears under on statements.
   const columns = useMemo<DataTableColumn<CarrierRecord>[]>(
     () => [
-      {
-        id: "actions",
-        header: "Action",
-        cell: (carrier) => (
-          <Link
-            href={`/carriers/${carrier.id}/edit?from=list`}
-            aria-label={`Edit ${carrier.name}`}
-            className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
-          >
-            <EditIcon className="size-3.5 shrink-0" />
-          </Link>
-        ),
-      },
+      ...(canUpdate
+        ? [
+            {
+              id: "actions",
+              header: "Action",
+              cell: (carrier: CarrierRecord) => (
+                <Link
+                  href={`/carriers/${carrier.id}/edit?from=list`}
+                  aria-label={`Edit ${carrier.name}`}
+                  className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
+                >
+                  <EditIcon className="size-3.5 shrink-0" />
+                </Link>
+              ),
+            },
+          ]
+        : []),
       {
         id: "name",
         header: "Name",
@@ -90,14 +97,14 @@ export function CarriersView({ carriers }: CarriersViewProps) {
         searchText: (carrier) => carrier.status,
       },
     ],
-    [],
+    [canUpdate],
   );
 
-  const addButton = (
+  const addButton = canCreate ? (
     <Link href="/carriers/new" className={PRIMARY_BUTTON_CLASS}>
       Add carrier
     </Link>
-  );
+  ) : null;
 
   return (
     <>
