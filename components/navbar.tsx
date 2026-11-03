@@ -15,6 +15,7 @@ import { RequestDialog } from "./request-dialog";
 import { TaskDialog } from "./task-dialog";
 import type { NavItem } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
+import { ViewAsToggle } from "./view-as";
 
 /** Icon buttons in the right-hand cluster share this look. */
 const ICON_BUTTON_CLASS =
@@ -39,6 +40,11 @@ type NavbarProps = {
   searchIndex: SearchIndex;
   /** The signed-in user: avatar opens a menu with name, email, View profile, Change password and Sign out. */
   user: SessionUser;
+  /**
+   * Permissions used for create-menu chrome. Defaults to `user`; Agent view
+   * passes a cloned user with the Agent role's flags.
+   */
+  chromeUser?: SessionUser;
 };
 
 export function Navbar({
@@ -51,6 +57,7 @@ export function Navbar({
   searchScopes,
   searchIndex,
   user,
+  chromeUser = user,
 }: NavbarProps) {
   const { savePreference } = usePreferences();
 
@@ -115,17 +122,23 @@ export function Navbar({
           <NavbarSearch scopes={searchScopes} index={searchIndex} className="hidden w-64 shrink-0 md:flex lg:w-80" />
         ) : null}
         <div className="ml-auto flex items-center justify-end gap-1 md:ml-0 md:flex-1">
-          {user.agentId ? <AgentCreateRequestButton user={user} /> : <CreateMenu user={user} />}
+          <ViewAsToggle className="hidden md:inline-flex" />
+          {chromeUser.agentId ? (
+            <AgentCreateRequestButton user={chromeUser} />
+          ) : (
+            <CreateMenu user={chromeUser} />
+          )}
           <ThemeToggle onChange={(theme) => savePreference("theme", theme)} />
           <NotificationsMenu buttonClassName={ICON_BUTTON_CLASS} />
           <UserMenu user={user} />
         </div>
       </header>
       {/* Below `md` the bar has no room, so the search sits in its own row and
-          scrolls away with the page. */}
+          scrolls away with the page. Agent toggle rides along when shown. */}
       {searchScopes.length > 0 ? (
-        <div className="border-b border-line bg-surface px-4 py-2 sm:px-6 md:hidden">
-          <NavbarSearch scopes={searchScopes} index={searchIndex} className="flex w-full" />
+        <div className="flex items-center gap-2 border-b border-line bg-surface px-4 py-2 sm:px-6 md:hidden">
+          <NavbarSearch scopes={searchScopes} index={searchIndex} className="flex min-w-0 flex-1" />
+          <ViewAsToggle className="shrink-0" />
         </div>
       ) : null}
     </>

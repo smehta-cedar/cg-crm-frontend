@@ -9,6 +9,7 @@ import { Navbar } from "./navbar";
 import { usePreferences } from "./preferences";
 import { currentNavLabel, Sidebar, type NavItem } from "./sidebar";
 import { useTheme } from "./theme-provider";
+import { useViewAs, ViewAsBanner, ViewAsGate } from "./view-as";
 
 /*
  * Page frame: sticky navbar on top, a nav rail on the left from `lg` up, and
@@ -48,10 +49,14 @@ export function AppShell({
   const railId = useId();
   const pathname = usePathname();
   const { preferences, savePreference } = usePreferences();
+  const { mode, effectiveUser, agentNavItems, agentFooterItems } = useViewAs();
   // Saved on the user's account, so the server already renders the rail at
   // the width they left it.
   const collapsed = preferences.sidebarCollapsed ?? false;
   const toggleCollapsed = () => savePreference("sidebarCollapsed", !collapsed);
+
+  const activeNav = mode === "agent" ? agentNavItems : navItems;
+  const activeFooter = mode === "agent" ? agentFooterItems : footerItems;
 
   // The user's saved theme wins over whatever this browser showed last
   // (another user's, or the OS default on a browser they haven't used).
@@ -97,11 +102,13 @@ export function AppShell({
         railCollapsed={collapsed}
         onToggleRail={toggleCollapsed}
         railId={railId}
-        pageTitle={currentNavLabel([...navItems, ...footerItems], pathname) ?? pageTitles[pathname]}
-        searchScopes={[...navItems, ...footerItems].filter((item) => item.searchable)}
+        pageTitle={currentNavLabel([...activeNav, ...activeFooter], pathname) ?? pageTitles[pathname]}
+        searchScopes={[...activeNav, ...activeFooter].filter((item) => item.searchable)}
         searchIndex={searchIndex}
         user={user}
+        chromeUser={effectiveUser}
       />
+      <ViewAsBanner />
 
       <div className="lg:flex">
         <aside
@@ -113,20 +120,20 @@ export function AppShell({
           }`}
         >
           <div className={collapsed ? "overflow-visible" : "min-h-0 flex-1 overflow-y-auto"}>
-            <Sidebar items={navItems} collapsed={collapsed} />
+            <Sidebar items={activeNav} collapsed={collapsed} />
           </div>
-          {footerItems.length > 0 ? (
+          {activeFooter.length > 0 ? (
             <div
               className={`mt-auto shrink-0 border-t border-line ${
                 collapsed ? "overflow-visible" : ""
               }`}
             >
-              <Sidebar items={footerItems} collapsed={collapsed} />
+              <Sidebar items={activeFooter} collapsed={collapsed} />
             </div>
           ) : null}
         </aside>
         <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          {children}
+          <ViewAsGate>{children}</ViewAsGate>
         </main>
       </div>
 
@@ -167,11 +174,11 @@ export function AppShell({
           </div>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface-muted">
             <div className="flex-1">
-              <Sidebar items={navItems} onLinkClick={closeDrawer} />
+              <Sidebar items={activeNav} onLinkClick={closeDrawer} />
             </div>
-            {footerItems.length > 0 ? (
+            {activeFooter.length > 0 ? (
               <div className="mt-auto border-t border-line">
-                <Sidebar items={footerItems} onLinkClick={closeDrawer} />
+                <Sidebar items={activeFooter} onLinkClick={closeDrawer} />
               </div>
             ) : null}
           </div>
