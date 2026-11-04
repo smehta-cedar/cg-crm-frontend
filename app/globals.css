@@ -351,3 +351,39 @@ dialog.hr-drawer::backdrop {
     transform: translateX(0);
   }
 }
+
+/* Page-loading turtle: soft swim-float on top of the GIF's own flipper loop. */
+@keyframes turtle-float {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-1.25deg);
+  }
+  20% {
+    transform: translate3d(3px, -8px, 0) rotate(-0.4deg);
+  }
+  40% {
+    transform: translate3d(5px, -16px, 0) rotate(0.6deg);
+  }
+  60% {
+    transform: translate3d(0, -20px, 0) rotate(1.25deg);
+  }
+  80% {
+    transform: translate3d(-4px, -10px, 0) rotate(0.2deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-1.25deg);
+  }
+}
+
+.turtle-float {
+  animation: turtle-float 4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  image-rendering: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turtle-float {
+    animation: none;
+    will-change: auto;
+  }
+}
