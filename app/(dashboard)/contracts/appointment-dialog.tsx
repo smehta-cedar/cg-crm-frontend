@@ -2,6 +2,7 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { GHOST_BUTTON_CLASS, INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/classes";
+import { MASK, PasswordInput } from "@/components/credential-value";
 import { Field } from "@/components/field";
 import { ModalDialog, useModalDialog } from "@/components/modal-dialog";
 import { StateCheckboxes } from "@/components/state-checkboxes";
@@ -15,6 +16,7 @@ import type {
   ContractStatus,
 } from "@/lib/carrier-contracts";
 import type { CarrierRecord } from "@/lib/carriers";
+import type { PasswordRecord } from "@/lib/passwords";
 import { intersectStates, stateSummary } from "@/lib/us-states";
 import { byName } from "@/lib/text";
 
@@ -48,12 +50,20 @@ import { byName } from "@/lib/text";
  * mandatory while the status is Active; Applied, Pending and Inactive
  * contracts may leave it blank.
  *
+ * `logins` (the agent profile, when its Passwords section is readable) adds
+ * Portal username and Portal password while the status is Active, both
+ * mandatory. They fill the agent's password at the chosen carrier (the API
+ * saves them there and makes it active), never the contract. The username
+ * starts as saved; a saved password shows masked and a blank field keeps it.
+ *
  * `selfEdit` (an agent's own sign-in) locks Status: what they add starts
  * Pending, and only staff change it. The API holds to the same.
  */
 
 type AgentOption = Pick<AgentRecord, "id" | "name" | "status" | "licensedStates">;
 type CarrierOption = Pick<CarrierRecord, "id" | "name" | "status" | "availableStates" | "agentAccessible">;
+/** The agent's portal login at a carrier, as the Passwords section lists it. */
+type LoginOption = Pick<PasswordRecord, "carrierId" | "username" | "hasPassword">;
 
 /** Which dialog is open. Add may start on an agent or carrier; edit holds the contract as it was. */
 export type AppointmentEditor =
@@ -88,6 +98,8 @@ type AppointmentDialogProps = {
   carriers: CarrierOption[];
   /** Whether a contract can't be saved without a writing number. */
   requireWritingNumber?: boolean;
+  /** The agent's carrier passwords; given, an Active contract asks for its portal login. */
+  logins?: LoginOption[];
   /** An agent's own sign-in: a new contract starts Pending and Status is locked (staff only). */
   selfEdit?: boolean;
   /** Saves the values; resolves with an error to show instead of closing. */
@@ -101,6 +113,7 @@ export function AppointmentDialog({
   agents,
   carriers,
   requireWritingNumber = false,
+  logins,
   selfEdit = false,
   onSave,
   onClose,
@@ -118,6 +131,7 @@ export function AppointmentDialog({
           agents={agents}
           carriers={carriers}
           requireWritingNumber={requireWritingNumber}
+          logins={logins}
           selfEdit={selfEdit}
           onSave={onSave}
           close={close}
@@ -140,6 +154,7 @@ function AppointmentForm({
   agents,
   carriers,
   requireWritingNumber,
+  logins,
   selfEdit,
   onSave,
   close,
@@ -164,6 +179,10 @@ function AppointmentForm({
 
   const agent = agents.find((option) => option.id === agentId);
   const carrier = carriers.find((option) => option.id === carrierId);
+  // Only an active contract asks for the portal login; a saved password may stay as it is.
+  const loginRequired = logins !== undefined && status === "active";
+  const login = logins?.find((option) => option.carrierId === carrierId);
+  const portalPasswordRequired = loginRequired && !login?.hasPassword;
   // The states that can be checked: where the agent is licensed and the carrier is available.
   const ceiling =
     agent && carrier ? intersectStates(agent.licensedStates, carrier.availableStates) : [];
@@ -195,6 +214,8 @@ function AppointmentForm({
   const agentError = error?.field === "agentId" ? error.message : null;
   const carrierError = error?.field === "carrierId" ? error.message : null;
   const writingNumberError = error?.field === "writingNumber" ? error.message : null;
+  const usernameError = error?.field === "username" ? error.message : null;
+  const portalPasswordError = error?.field === "portalPassword" ? error.message : null;
   const statesError = error?.field === "appointedStates" ? error.message : null;
   const formError = error?.field === "form" ? error.message : null;
 
@@ -211,9 +232,24 @@ function AppointmentForm({
       appointedStates: normalizeStates(
         data.getAll("appointedStates").map((code) => String(code).trim()).filter(Boolean),
       ),
+      ...(loginRequired
+        ? {
+            username: String(data.get("username") ?? "").trim(),
+            // Not trimmed: spaces and case can matter in a password.
+            portalPassword: String(data.get("portalPassword") ?? ""),
+          }
+        : {}),
     };
     if (writingNumberRequired && !values.writingNumber) {
       setError({ field: "writingNumber", message: "Enter the writing number." });
+      return;
+    }
+    if (loginRequired && !values.username) {
+      setError({ field: "username", message: "Username can't be blank." });
+      return;
+    }
+    if (portalPasswordRequired && !values.portalPassword?.trim()) {
+      setError({ field: "portalPassword", message: "Password can't be blank." });
       return;
     }
     setSaving(true);
@@ -341,6 +377,57 @@ function AppointmentForm({
             ))}
           </select>
         </Field>
+        {loginRequired ? (
+          <>
+            <Field
+              label="Portal username"
+              required
+              htmlFor={`${id}-username`}
+              hint={usernameError ?? undefined}
+              hintId={`${id}-username-error`}
+              error
+            >
+              {/* Keyed on the carrier, so choosing another one starts from that carrier's saved username. */}
+              <input
+                key={carrierId}
+                id={`${id}-username`}
+                name="username"
+                type="text"
+                required
+                pattern=".*\S.*"
+                autoComplete="off"
+                defaultValue={login?.username}
+                aria-invalid={usernameError ? true : undefined}
+                aria-describedby={usernameError ? `${id}-username-error` : undefined}
+                onChange={() => setError(null)}
+                className={INPUT_CLASS}
+              />
+            </Field>
+            <Field
+              label="Portal password"
+              required={portalPasswordRequired}
+              htmlFor={`${id}-portal-password`}
+              hint={portalPasswordError ?? undefined}
+              hintId={`${id}-portal-password-error`}
+              error
+            >
+              {/* new-password stops the browser filling in the signed-in user's own saved password. */}
+              <PasswordInput
+                key={carrierId}
+                id={`${id}-portal-password`}
+                name="portalPassword"
+                required={portalPasswordRequired}
+                autoComplete="new-password"
+                spellCheck={false}
+                placeholder={login?.hasPassword ? MASK : undefined}
+                aria-invalid={portalPasswordError ? true : undefined}
+                aria-describedby={portalPasswordError ? `${id}-portal-password-error` : undefined}
+                onChange={() => setError(null)}
+                className={INPUT_CLASS}
+              />
+            </Field>
+          </>
+        ) : null}
         <StateCheckboxes
           legend="States"
           name="appointedStates"

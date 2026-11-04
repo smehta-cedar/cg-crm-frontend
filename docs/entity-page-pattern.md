@@ -773,7 +773,13 @@ then the appointment, so a state missing from several is named once.
   and they render unchecked with no `name`, so they never submit.
 - One appointment per agent + carrier, checked in the form.
 - Writing number is optional; when set it must be unique within that carrier
-  (ignoring case). Blank numbers are skipped for the uniqueness check.
+  (ignoring case). Blank numbers are skipped for the uniqueness check. On the
+  agent profile it is mandatory while the status is Active.
+- On the agent profile (when its Passwords section is readable) an Active
+  contract also asks for Portal username and Portal password, both mandatory.
+  They are not contract fields: the API saves them on the agent's carrier
+  password and makes it active (without them it adds a pending one). The
+  username starts as saved; a saved password shows masked and blank keeps it.
 - A stored row missing `appointedStates` loads as `[]` with a `console.warn`.
   A missing `writingNumber` loads as `""`.
 

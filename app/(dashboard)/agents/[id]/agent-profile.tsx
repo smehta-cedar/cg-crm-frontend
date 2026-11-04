@@ -1369,6 +1369,7 @@ export function AgentProfile({
         ]}
         carriers={carriers}
         requireWritingNumber
+        logins={passwords ?? undefined}
         selfEdit={selfEdit}
         onSave={saveContract}
         onClose={() => setEditor(null)}

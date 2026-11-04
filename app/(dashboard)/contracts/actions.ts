@@ -6,7 +6,8 @@
  * PATCH /contracts/{id}/; the API keeps one contract per agent at each
  * carrier, a writing number unique within the carrier, every appointed
  * state within the agent's licences and the carrier's footprint (naming the
- * side that blocks it), and records the change note.
+ * side that blocks it), and records the change note. A login sent with an
+ * active contract goes on the agent's carrier password.
  *
  * What the API answers, and what the dialog shows for it:
  *
@@ -43,6 +44,8 @@ const ERROR_FIELDS: Record<string, AppointmentError["field"]> = {
   writing_number: "writingNumber",
   status: "status",
   appointed_states: "appointedStates",
+  username: "username",
+  portal_password: "portalPassword",
 };
 
 /** Adds a contract, or edits the one with `editingId`. */
@@ -56,6 +59,9 @@ export async function saveAppointment(
     writing_number: values.writingNumber,
     status: values.status,
     appointed_states: values.appointedStates,
+    // Sent only when the dialog asked for the login (an active contract on the agent profile).
+    ...(values.username === undefined ? {} : { username: values.username }),
+    ...(values.portalPassword === undefined ? {} : { portal_password: values.portalPassword }),
   };
   const result = editingId
     ? await apiFetch<ApiContract>(`/contracts/${encodeURIComponent(editingId)}/`, { method: "PATCH", body })

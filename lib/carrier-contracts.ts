@@ -64,12 +64,19 @@ export type CarrierContractRecord = {
 /** Carrier contract fields a note can record. The ID and the looked-up names never change on their own. */
 export type CarrierContractField = Exclude<keyof CarrierContractRecord, "id" | "agentName" | "carrierName">;
 
-/** What the add / edit dialog submits. */
-export type AppointmentValues = Pick<CarrierContractRecord, CarrierContractField>;
+/**
+ * What the add / edit dialog submits. An active contract may carry the
+ * agent's portal login at the carrier, which the API saves on their carrier
+ * password, not on the contract; a blank portalPassword keeps the saved one.
+ */
+export type AppointmentValues = Pick<CarrierContractRecord, CarrierContractField> & {
+  username?: string;
+  portalPassword?: string;
+};
 
 /** A save error, shown under the field it names, or under the form for `form`. */
 export type AppointmentError = {
-  field: "agentId" | "carrierId" | "writingNumber" | "status" | "appointedStates" | "form";
+  field: "agentId" | "carrierId" | "writingNumber" | "status" | "appointedStates" | "username" | "portalPassword" | "form";
   message: string;
 };
 
