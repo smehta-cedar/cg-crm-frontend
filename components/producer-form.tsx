@@ -737,7 +737,7 @@ export function ProducerForm<E extends object = Record<never, never>>({
         ) : null}
         {dates ? (
           <>
-            <Field label="Start date" htmlFor={`${id}-licence-start`}>
+            <Field label="Applied date" htmlFor={`${id}-licence-start`}>
               <input
                 id={`${id}-licence-start`}
                 type="date"
@@ -825,7 +825,7 @@ export function ProducerForm<E extends object = Record<never, never>>({
               {dates ? (
                 <>
                   <th scope="col" className="px-3 py-2 font-medium">
-                    Start date
+                    Applied date
                   </th>
                   <th scope="col" className="px-3 py-2 font-medium">
                     End date

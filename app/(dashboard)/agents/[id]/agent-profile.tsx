@@ -1179,7 +1179,7 @@ export function AgentProfile({
                               },
                               {
                                 key: "start",
-                                label: "Start",
+                                label: "Applied date",
                                 value: <time dateTime={license.startDate}>{formatLicenceDate(license.startDate)}</time>,
                                 filled: true,
                               },

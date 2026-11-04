@@ -197,7 +197,7 @@ export function StateLicenseForm({
             </div>
           </Field>
         ) : null}
-        <Field label="Start date" htmlFor={`${id}-start`}>
+        <Field label="Applied date" htmlFor={`${id}-start`}>
           <input
             id={`${id}-start`}
             type="date"

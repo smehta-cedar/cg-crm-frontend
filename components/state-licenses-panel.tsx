@@ -56,7 +56,7 @@ export function StateLicensesPanel({
     "Licence #",
     ...(showLines ? ["Lines"] : []),
     "Status",
-    "Start",
+    "Applied date",
     "End",
   ];
   return (

@@ -496,7 +496,7 @@ function ExpiryDetails({
         )}
       </DetailRow>
       <DetailRow label="Expires">{formatLicenceDate(mark.date)}</DetailRow>
-      {mark.startDate ? <DetailRow label="Starts">{formatLicenceDate(mark.startDate)}</DetailRow> : null}
+      {mark.startDate ? <DetailRow label="Applied date">{formatLicenceDate(mark.startDate)}</DetailRow> : null}
       {mark.licenseNumber ? <DetailRow label="Licence number">{mark.licenseNumber}</DetailRow> : null}
     </>
   );
