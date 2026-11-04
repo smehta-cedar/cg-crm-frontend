@@ -1,34 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
-import { EmptyState } from "@/components/empty-state";
 import { NoAccess } from "@/components/no-access";
-import { PageHeader } from "@/components/page-header";
 import { canView } from "@/lib/auth-user";
-import { getMatrix, type Money, type Month } from "@/lib/commissions";
 import { getSessionUser } from "@/lib/session";
 import { homeFor } from "../nav";
+import { OverviewView } from "./overview-view";
 
 export const metadata: Metadata = {
   title: "Overview",
 };
-
-/** Formats the decimal string with string ops only, so amounts never pass through a float. */
-function formatMoney(amount: Money) {
-  const negative = amount.startsWith("-");
-  const [whole, fraction] = (negative ? amount.slice(1) : amount).split(".");
-  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${negative ? "-" : ""}$${grouped}${fraction === undefined ? "" : `.${fraction}`}`;
-}
-
-function formatMonth(month: Month) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber - 1)).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
 
 export default async function OverviewPage() {
   // Sign-in lands here; a role without the dashboard goes to its first link.
@@ -39,70 +19,5 @@ export default async function OverviewPage() {
     return <NoAccess title="Overview" />;
   }
 
-  // The month comes from the clock, so render per request, not at build time.
-  await connection();
-
-  const now = new Date();
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const matrix = await getMatrix(month);
-  const monthLabel = formatMonth(matrix.month);
-
-  if (matrix.grandTotal === null) {
-    return (
-      <>
-        <PageHeader title="Overview" description={monthLabel} />
-        <EmptyState
-          title="No commissions this month"
-          description={`No carrier statements have been loaded for ${monthLabel} yet.`}
-        />
-      </>
-    );
-  }
-
-  const missingCarriers = matrix.carriers.filter(
-    (carrier) => matrix.carrierTotals[carrier.code] === undefined,
-  );
-  const reportingCount = matrix.carriers.length - missingCarriers.length;
-  const unassigned = matrix.rows.find((row) => row.agent === null);
-
-  const stats = [
-    { label: "Total commissions", value: formatMoney(matrix.grandTotal) },
-    { label: "Carriers reporting", value: `${reportingCount} of ${matrix.carriers.length}` },
-    { label: "Agents paid", value: String(matrix.rows.filter((row) => row.agent !== null).length) },
-    { label: "Unassigned", value: unassigned ? formatMoney(unassigned.total) : formatMoney("0.00") },
-  ];
-
-  return (
-    <>
-      <PageHeader title="Overview" description={monthLabel} />
-
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-lg border glass p-4 shadow-sm">
-            <dt className="text-sm text-fg-muted">{stat.label}</dt>
-            <dd className="mt-1 text-2xl font-semibold tabular-nums text-fg">{stat.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {missingCarriers.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-base font-semibold text-fg">Missing statements</h2>
-          <p className="mt-1 text-sm text-fg-muted">
-            No data yet for {monthLabel} from these carriers.
-          </p>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {missingCarriers.map((carrier) => (
-              <li
-                key={carrier.code}
-                className="rounded-md bg-warn-soft px-2.5 py-1 text-sm font-medium text-warn-ink"
-              >
-                {carrier.name}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </>
-  );
+  return <OverviewView />;
 }
