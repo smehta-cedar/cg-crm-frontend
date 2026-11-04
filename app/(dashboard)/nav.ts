@@ -54,8 +54,6 @@ const NAV_ITEMS: NavItem[] = [
       },
     ],
   },
-  // How payouts are calculated, so it goes with the commissions overview.
-  { href: "/rulebook", label: "Rulebook", icon: "rulebook", module: "rulebook" },
   { href: "/passwords", label: "Passwords", icon: "passwords", module: "passwords", searchable: true },
   {
     href: "/contracts",

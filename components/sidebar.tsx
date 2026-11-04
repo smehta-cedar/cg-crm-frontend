@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { NavIcon, type NavIconName } from "./nav-icons";
 
@@ -6,6 +7,24 @@ import { NavIcon, type NavIconName } from "./nav-icons";
  * Client-only: reads the pathname to mark the active link. Rendered by
  * AppShell, which is the client boundary, so it has no directive of its own.
  */
+
+/** Chevron for sections with sub-links; rotates when the section is open. */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`ml-auto size-4 shrink-0 text-fg-faint transition-transform duration-150 ${open ? "rotate-90" : ""}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
 
 export type NavItem = {
   href: string;
@@ -82,9 +101,6 @@ export const LINK_ACTIVE = "bg-brand-soft text-brand-ink shadow-[inset_3px_0_0_v
 export const LINK_IDLE = "text-fg-muted hover:bg-brand-soft/60 hover:text-fg";
 /** An ancestor of the current page: selected, but not the page itself. */
 const LINK_ANCESTOR = "text-brand-ink hover:bg-brand-soft/60";
-
-/** Small subsection heading over a section's sub-links. */
-const HEADING_CLASS = "flex items-center gap-1.5 px-3 pt-3 pb-1 text-[0.625rem] font-semibold uppercase tracking-wider";
 
 /** A section's sub-links, its own page first when it has a `listLabel`. */
 function sectionLinks(item: NavItem, pathname: string) {
@@ -175,17 +191,52 @@ export function Sidebar({ items, onLinkClick, collapsed }: SidebarProps) {
           }
 
           return (
-            <li key={item.href}>
-              {/* Dimmed so the links under it lead; a touch brighter while it holds the current page. */}
-              <p className={`${HEADING_CLASS} ${activeChild ? "text-fg-subtle" : "text-fg-faint"}`}>
-                {item.icon && <NavIcon name={item.icon} className="size-3 shrink-0" />}
-                {item.label}
-              </p>
-              {subLinkList(links, "ml-3 space-y-1")}
-            </li>
+            <SidebarSection
+              key={item.href}
+              item={item}
+              links={links}
+              activeChild={activeChild}
+              subLinkList={subLinkList}
+            />
           );
         })}
       </ul>
     </nav>
+  );
+}
+
+/** Expandable section: same-size icon as top-level links, with a chevron. */
+function SidebarSection({
+  item,
+  links,
+  activeChild,
+  subLinkList,
+}: {
+  item: NavItem;
+  links: ReturnType<typeof sectionLinks>;
+  activeChild: boolean;
+  subLinkList: (links: ReturnType<typeof sectionLinks>, className: string) => ReactNode;
+}) {
+  // Start open so sub-links stay visible; re-open when the user navigates into one.
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (activeChild) setOpen(true);
+  }, [activeChild]);
+
+  return (
+    <li>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className={`${LINK_BASE} w-full ${activeChild ? LINK_ANCESTOR : LINK_IDLE}`}
+      >
+        {item.icon && <NavIcon name={item.icon} className="size-5 shrink-0" />}
+        <span>{item.label}</span>
+        <Chevron open={open} />
+      </button>
+      {open && subLinkList(links, "ml-3 space-y-1")}
+    </li>
   );
 }
