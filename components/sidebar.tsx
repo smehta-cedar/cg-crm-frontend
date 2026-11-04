@@ -15,7 +15,7 @@ export type NavItem = {
    * href, e.g. a link to one profile that stands for all of them.
    */
   activePrefix?: string;
-  /** Paths under `activePrefix` that are not this link's, e.g. /agents/new under /agents/. */
+  /** Paths under this link that are not its own, e.g. /agents/new under /agents/. */
   activeExcept?: string[];
   /** Leading icon; sub-links carry a smaller one. */
   icon?: NavIconName;
@@ -53,8 +53,8 @@ type SidebarProps = {
 
 /** "/" matches only itself (kept for any future root link); other items also match their nested routes. */
 function isActive(pathname: string, href: string, activePrefix?: string, activeExcept: string[] = []) {
-  const excepted = activeExcept.some((path) => pathname === path || pathname.endsWith(path));
-  if (activePrefix) return pathname.startsWith(activePrefix) && !excepted;
+  if (activeExcept.some((path) => pathname === path || pathname.endsWith(path))) return false;
+  if (activePrefix) return pathname.startsWith(activePrefix);
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }

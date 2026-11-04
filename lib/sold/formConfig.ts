@@ -12,7 +12,7 @@ export type OptionList = "states" | "leadSources" | "calendars" | "umbrellas" | 
 export type FieldDef = {
   key: string;
   label: string;
-  type: "text" | "phone" | "select" | "yesno" | "products";
+  type: "text" | "phone" | "date" | "select" | "yesno" | "products";
   required: boolean;
   options?: OptionList;
   /**

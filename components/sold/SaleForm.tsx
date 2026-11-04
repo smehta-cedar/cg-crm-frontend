@@ -43,7 +43,7 @@ function fieldSpan(field: FieldDef, sectionTitle: string) {
   return "";
 }
 
-function sectionColumns(title: string) {
+export function sectionColumns(title: string) {
   if (title === "Client Info") return "sm:grid-cols-6";
   if (title === "Lead & Calendar") return "grid-cols-1";
   return "sm:grid-cols-2";
@@ -60,38 +60,14 @@ function keysInOrder(state: SaleState, options: SoldOptions): string[] {
   );
 }
 
-export function SaleForm({ me, options, showHeader = true, afterSubmit }: SaleFormProps) {
-  const idPrefix = useId();
-  const headerRef = useRef<HTMLDivElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
-
-  const [state, setState] = useState<SaleState>(emptySaleState);
+/**
+ * The answers being filled in and their errors, with the handlers the
+ * questions call. Shared by the Sold form and the Sold list's edit popup.
+ */
+export function useSaleAnswers(initial: () => SaleState) {
+  const [state, setState] = useState<SaleState>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [banner, setBanner] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<SubmittedSale | null>(null);
-  const [party, setParty] = useState<SubmittedSale | null>(null);
   const [fileKeys, setFileKeys] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) canvas.setAttribute("popover", "manual");
-  }, []);
-
-  useEffect(() => {
-    if (!party) return;
-    const dialog = dialogRef.current;
-    const canvas = canvasRef.current;
-    if (!dialog) return;
-    dialog.showModal();
-    dialog.querySelector<HTMLButtonElement>("button.sold-party-ok")?.focus();
-
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const canPopover = typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
-    if (!reduced && canPopover && canvas) confetti(canvas, dialog);
-  }, [party]);
 
   // An answer that changes drops its error; the API checks it again on submit.
   const clearErrors = (matches: (key: string) => boolean) => {
@@ -125,6 +101,41 @@ export function SaleForm({ me, options, showHeader = true, afterSubmit }: SaleFo
     setState((current) => ({ ...current, files: { ...current.files, [product]: file } }));
     clearErrors((k) => k === productKey(product, "pdf"));
   };
+
+  return { state, setState, errors, setErrors, fileKeys, setFileKeys, setValue, onToggleProduct, onSkipPdf, onFile };
+}
+
+export function SaleForm({ me, options, showHeader = true, afterSubmit }: SaleFormProps) {
+  const idPrefix = useId();
+  const headerRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const { state, setState, errors, setErrors, fileKeys, setFileKeys, setValue, onToggleProduct, onSkipPdf, onFile } =
+    useSaleAnswers(emptySaleState);
+  const [banner, setBanner] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState<SubmittedSale | null>(null);
+  const [party, setParty] = useState<SubmittedSale | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) canvas.setAttribute("popover", "manual");
+  }, []);
+
+  useEffect(() => {
+    if (!party) return;
+    const dialog = dialogRef.current;
+    const canvas = canvasRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    dialog.querySelector<HTMLButtonElement>("button.sold-party-ok")?.focus();
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canPopover = typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
+    if (!reduced && canPopover && canvas) confetti(canvas, dialog);
+  }, [party]);
 
   const clearForm = (ask: boolean) => {
     if (ask && !confirm("Clear all answers on this form?")) return;
@@ -343,7 +354,7 @@ function YesNo({
   );
 }
 
-function TopField({
+export function TopField({
   idPrefix,
   field,
   sectionTitle,
@@ -450,7 +461,7 @@ function TopField({
       <Field label={field.label} htmlFor={id} required={required} {...err}>
         <input
           id={id}
-          type={phone ? "tel" : "text"}
+          type={phone ? "tel" : field.type === "date" ? "date" : "text"}
           {...(phone ? { inputMode: "tel" as const, autoComplete: "off", placeholder: "(555) 555-5555" } : {})}
           value={value}
           {...aria}

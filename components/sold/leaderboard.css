@@ -221,18 +221,64 @@ html:not(.dark) .lb .periods .divider {
   border-radius: 4px;
 }
 
+/* An earlier day or month: clicking it again goes back to today / this month. */
+.lb .periods button[aria-pressed="true"][data-past] {
+  cursor: pointer;
+}
+
+/* Calendar buttons beside Today and This month: open the native day / month picker. */
+.lb .pick {
+  position: relative;
+  display: flex;
+  margin-left: 0.45em;
+}
+
+.lb .periods .pick-button {
+  display: flex;
+  padding: 0.08em;
+  border-radius: 6px;
+  color: var(--lb-muted);
+}
+
+.lb .periods .pick-button:hover {
+  color: var(--lb-text);
+}
+
+.lb .pick-button svg {
+  width: 0.8em;
+  height: 0.8em;
+}
+
+.lb .pick-input {
+  position: absolute;
+  inset: auto 0 0 auto;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lb .panel[aria-busy="true"] .table {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
 .lb .table {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.lb .panel[data-period="today"] {
+.lb .panel[data-period="day"],
+.lb .panel[data-period="month"] {
   --cols: 3.25rem 1.2fr 4.5rem 4.5rem 4rem 4rem 6.5rem;
 }
 
-.lb .panel[data-period="month"] {
-  --cols: 3.25rem 1.2fr 4.5rem 4.5rem 4rem 4rem 6.5rem;
+/* This month adds Projected. */
+.lb .panel[data-projected] {
+  --cols: 3.25rem 1.2fr 4.5rem 4.5rem 4rem 4rem 6.5rem 6.5rem;
 }
 
 /* Click Tracker board: # · Setter · Answered · Booked · LT · Rate */
@@ -455,6 +501,10 @@ html:not(.dark) .lb .periods .divider {
   text-shadow: 0 0 12px color-mix(in srgb, var(--lb-revenue) 35%, transparent);
 }
 
+.lb .projected {
+  color: var(--lb-muted);
+}
+
 .lb .revenue.negative {
   color: var(--lb-error);
   text-shadow: none;
@@ -569,9 +619,13 @@ html:not(.dark) .lb .periods .divider {
     display: none !important;
   }
 
-  .lb .panel[data-period="today"],
+  .lb .panel[data-period="day"],
   .lb .panel[data-period="month"] {
     --cols: 2.75rem 1fr 3.5rem 5.5rem;
+  }
+
+  .lb .panel[data-projected] {
+    --cols: 2.75rem 1fr 3.5rem 5.5rem 5.5rem;
   }
 
   .lb .panel[data-period="tracker"] .detail {

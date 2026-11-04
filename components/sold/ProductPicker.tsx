@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { productFieldLabel } from "@/lib/sold/formConfig";
 import {
   blockedProducts,
@@ -106,7 +107,7 @@ export function ProductPicker({
   );
 }
 
-function ProductEntry({
+export function ProductEntry({
   idPrefix,
   product,
   field,
@@ -114,6 +115,7 @@ function ProductEntry({
   state,
   error,
   fileKey,
+  keptPdf,
   onFieldRef,
   onValue,
   onSkipPdf,
@@ -126,6 +128,8 @@ function ProductEntry({
   state: SaleState;
   error?: string;
   fileKey: number;
+  /** The PDF a saved product already has (the list's edit): shown under the upload, which it makes optional. */
+  keptPdf?: ReactNode;
   onFieldRef?: (key: string, el: HTMLElement | null) => void;
   onValue: (key: string, value: string) => void;
   onSkipPdf: (product: string, skip: boolean) => void;
@@ -151,7 +155,7 @@ function ProductEntry({
     return (
       <>
         <div ref={setRef} className={canSkip ? "sm:col-span-1" : undefined}>
-          <Field label={label} htmlFor={id} required={pdfRequired(product, state)} {...err}>
+          <Field label={label} htmlFor={id} required={!keptPdf && pdfRequired(product, state)} {...err}>
             <input
               key={fileKey}
               id={id}
@@ -163,6 +167,8 @@ function ProductEntry({
               className={`${INPUT_CLASS} file:mr-3 file:rounded file:border-0 file:bg-surface-muted file:px-2 file:py-1 file:text-sm file:font-medium file:text-fg disabled:opacity-50`}
             />
           </Field>
+          {/* Unable to generate drops it on save. */}
+          {skipped ? null : keptPdf}
         </div>
         {canSkip ? (
           <label className="mt-7 flex min-h-10 cursor-pointer items-center gap-2 text-sm text-fg-muted">

@@ -8,7 +8,15 @@ import "server-only";
  */
 
 import { apiGet, apiGetAll } from "@/lib/api-server";
-import type { Board, BoardTotals, Leaderboard, SoldOptions, SoldProductRow, SubmittedSale } from "./types";
+import type {
+  Board,
+  BoardTotals,
+  Leaderboard,
+  LeaderboardPick,
+  SoldOptions,
+  SoldProductRow,
+  SubmittedSale,
+} from "./types";
 
 type ApiSoldOptions = {
   products: SoldOptions["products"];
@@ -27,6 +35,7 @@ type ApiSaleProduct = {
   carrier: { id: string; name: string };
   effective_date: string;
   premium: string | null;
+  commission: string;
   mbi: string;
   contract_number: string;
   sup_plan: string;
@@ -56,6 +65,7 @@ export type ApiSale = {
 };
 
 type ApiBoard = {
+  date: string;
   rows: (BoardTotals & {
     id: string;
     name: string;
@@ -68,7 +78,7 @@ type ApiBoard = {
   totals: BoardTotals;
 };
 
-type ApiLeaderboard = { date: string; today: ApiBoard; month: ApiBoard };
+type ApiLeaderboard = { date: string; day: ApiBoard; month: ApiBoard };
 
 const yesNo = (value: boolean) => (value ? "Yes" : "No");
 
@@ -113,8 +123,10 @@ export async function getSoldRows(): Promise<SoldProductRow[]> {
       calendar: sale.calendar,
       product: product.product,
       carrier: product.carrier.name,
+      carrierId: product.carrier.id,
       effectiveDate: product.effective_date,
       premium: product.premium ?? "",
+      commission: product.commission,
       contractNumber: product.contract_number,
       mbi: product.mbi,
       supPlan: product.sup_plan,
@@ -133,13 +145,14 @@ export async function getSoldRows(): Promise<SoldProductRow[]> {
 
 function toBoard(board: ApiBoard): Board {
   return {
+    date: board.date,
     rows: board.rows.map(({ is_me, ...row }) => ({ ...row, isMe: is_me })),
     totals: board.totals,
   };
 }
 
-/** Today's and this month's boards, ranked by the API. */
-export async function getLeaderboard(): Promise<Leaderboard> {
-  const data = await apiGet<ApiLeaderboard>("/sold/leaderboard/");
-  return { date: data.date, today: toBoard(data.today), month: toBoard(data.month) };
+/** A day's and a month's boards (today and this month unless picked), ranked by the API. */
+export async function getLeaderboard(pick: LeaderboardPick = {}): Promise<Leaderboard> {
+  const data = await apiGet<ApiLeaderboard>("/sold/leaderboard/", pick);
+  return { date: data.date, day: toBoard(data.day), month: toBoard(data.month) };
 }

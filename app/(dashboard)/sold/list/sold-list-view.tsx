@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { GHOST_BUTTON_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/classes";
+import { useMemo, useState } from "react";
+import { GHOST_BUTTON_CLASS, PRIMARY_BUTTON_CLASS, ROW_BUTTON_CLASS } from "@/components/classes";
 import { DataTable, type DataTableColumn } from "@/components/data-table";
+import { EditIcon } from "@/components/edit-icon";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { clientFullName, type SoldProductRow } from "@/lib/sold/types";
+import { SaleEditDialog } from "@/components/sold/SaleEditDialog";
+import { clientFullName, soldPdfHref, type SoldOptions, type SoldProductRow } from "@/lib/sold/types";
 
 function dash(value: string) {
   return value.trim() ? value : "—";
@@ -24,7 +27,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => row.soldDate,
     sortValue: (row) => row.soldDate,
     searchText: (row) => row.soldDate,
-    width: "9%",
+    width: "8%",
   },
   {
     id: "client",
@@ -57,7 +60,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     },
     sortValue: (row) => clientFullName(row),
     searchText: (row) => [clientFullName(row), row.clientPhone, row.state],
-    width: "14%",
+    width: "12%",
   },
   {
     id: "product",
@@ -65,7 +68,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => <span className="font-medium text-fg">{row.product}</span>,
     sortValue: (row) => row.product,
     searchText: (row) => row.product,
-    width: "8%",
+    width: "7%",
   },
   {
     id: "carrier",
@@ -73,7 +76,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => dash(row.carrier),
     sortValue: (row) => row.carrier,
     searchText: (row) => row.carrier,
-    width: "14%",
+    width: "12%",
   },
   {
     id: "effectiveDate",
@@ -81,7 +84,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => dash(row.effectiveDate),
     sortValue: (row) => row.effectiveDate,
     searchText: (row) => row.effectiveDate,
-    width: "9%",
+    width: "8%",
   },
   {
     id: "premium",
@@ -96,7 +99,7 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => dash(row.leadSource),
     sortValue: (row) => row.leadSource,
     searchText: (row) => row.leadSource,
-    width: "11%",
+    width: "10%",
   },
   {
     id: "calendar",
@@ -104,6 +107,13 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => dash(row.calendar),
     sortValue: (row) => row.calendar,
     searchText: (row) => row.calendar,
+    width: "7%",
+  },
+  {
+    id: "commission",
+    header: "Commission",
+    cell: (row) => <span className="tabular-nums">{formatMoney(row.commission)}</span>,
+    sortValue: (row) => parseFloat(row.commission) || 0,
     width: "8%",
   },
   {
@@ -120,7 +130,13 @@ const COLUMNS: DataTableColumn<SoldProductRow>[] = [
     cell: (row) => <span className="text-fg-muted">{dash(row.submittedBy)}</span>,
     sortValue: (row) => row.submittedBy,
     searchText: (row) => [row.submittedBy, row.submittedByEmail],
-    width: "13%",
+    width: "9%",
+  },
+  {
+    id: "pdf",
+    header: "PDF",
+    cell: (row) => <PdfCell row={row} />,
+    width: "8%",
   },
 ];
 
@@ -135,22 +151,19 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 /** The product's PDF as a download, or why there is none. */
-function PdfDetail({ row }: { row: SoldProductRow }) {
-  if (!row.pdfName && !row.pdfUnableToGenerate) return null;
-  return (
-    <div>
-      <dt className="text-xs text-fg-subtle">PDF</dt>
-      <dd className="mt-0.5 text-sm text-fg">
-        {row.pdfName ? (
-          <a href={`/sold/products/${encodeURIComponent(row.id)}/pdf`} className="text-brand-ink hover:underline">
-            {row.pdfName}
-          </a>
-        ) : (
-          "Unable to generate"
-        )}
-      </dd>
-    </div>
-  );
+function PdfCell({ row }: { row: SoldProductRow }) {
+  if (row.pdfName) {
+    return (
+      <a
+        href={soldPdfHref(row.id)}
+        title={row.pdfName}
+        className="block truncate text-brand-ink hover:underline"
+      >
+        {row.pdfName}
+      </a>
+    );
+  }
+  return <span className="text-fg-muted">{row.pdfUnableToGenerate ? "Unable to generate" : "—"}</span>;
 }
 
 type SoldListViewProps = {
@@ -158,10 +171,42 @@ type SoldListViewProps = {
   /** Holds the Sold-form add box. */
   canSubmit: boolean;
   canSeeLeaderboard: boolean;
+  /** The form's choices for a row's edit popup; null when the role can't edit (Sold list edit box). */
+  editOptions: SoldOptions | null;
 };
 
-/** Product rows for every submitted sale the user can see. */
-export function SoldListView({ rows, canSubmit, canSeeLeaderboard }: SoldListViewProps) {
+/** Product rows for every submitted sale the user can see; a row's Edit opens SaleEditDialog. */
+export function SoldListView({ rows, canSubmit, canSeeLeaderboard, editOptions }: SoldListViewProps) {
+  const [editing, setEditing] = useState<SoldProductRow | null>(null);
+
+  const columns = useMemo<DataTableColumn<SoldProductRow>[]>(
+    () =>
+      editOptions
+        ? [
+            {
+              id: "actions",
+              header: "Action",
+              cell: (row: SoldProductRow) => (
+                <button
+                  type="button"
+                  onClick={() => setEditing(row)}
+                  className={`inline-flex items-center gap-1.5 ${ROW_BUTTON_CLASS}`}
+                >
+                  <EditIcon className="size-3.5 shrink-0" />
+                  <span className="sr-only">{` ${clientFullName(row)} ${row.product}`}</span>
+                </button>
+              ),
+              width: "5%",
+            },
+            ...COLUMNS,
+          ]
+        : COLUMNS,
+    [editOptions],
+  );
+
+  // A sale's answers are shared by its products, whose rows share its saleId.
+  const saleProducts = editing ? rows.filter((row) => row.saleId === editing.saleId).map((row) => row.product) : [];
+
   const submit = canSubmit ? (
     <Link href="/sold" className={PRIMARY_BUTTON_CLASS}>
       Submit sale
@@ -194,7 +239,7 @@ export function SoldListView({ rows, canSubmit, canSeeLeaderboard }: SoldListVie
       ) : (
         <DataTable
           rows={rows}
-          columns={COLUMNS}
+          columns={columns}
           getRowId={(row) => row.id}
           unit={["product", "products"]}
           saveAs="sold"
@@ -212,11 +257,19 @@ export function SoldListView({ rows, canSubmit, canSeeLeaderboard }: SoldListVie
               <Detail label="Previous MAPD/PDP product" value={row.previousMapdPdpProduct} />
               <Detail label="Umbrella" value={row.umbrella} />
               <Detail label="Submitted by" value={row.submittedByEmail} />
-              <PdfDetail row={row} />
             </dl>
           )}
         />
       )}
+
+      {editOptions ? (
+        <SaleEditDialog
+          row={editing}
+          saleProducts={saleProducts}
+          options={editOptions}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
     </>
   );
 }

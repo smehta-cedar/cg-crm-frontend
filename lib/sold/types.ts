@@ -43,9 +43,12 @@ export type SoldProductRow = {
   calendar: string;
   product: string;
   carrier: string;
+  carrierId: string;
   effectiveDate: string;
   /** Premium amount, or "" when the product has none (MAPD/PDP). */
   premium: string;
+  /** What the product earns, worked out by the API (backend/apps/sold/commission.py). */
+  commission: string;
   contractNumber: string;
   mbi: string;
   supPlan: string;
@@ -65,6 +68,11 @@ export function clientFullName(row: Pick<SoldProductRow, "clientFirstName" | "cl
   return [row.clientFirstName, row.clientLastName].filter(Boolean).join(" ").trim();
 }
 
+/** Where a sold product's PDF downloads (app/(dashboard)/sold/products/[id]/pdf/route.ts). */
+export function soldPdfHref(id: string) {
+  return `/sold/products/${encodeURIComponent(id)}/pdf`;
+}
+
 /** What the success popup shows about a sale the API just stored. */
 export type SubmittedSale = {
   clientName: string;
@@ -75,7 +83,16 @@ export type SubmittedSale = {
 
 export type UmbrellaTier = "U3" | "U2" | "U1";
 
-export type BoardTotals = { sales: number; mapd: number; sup: number; anc: number; revenue: number };
+export type BoardTotals = {
+  sales: number;
+  mapd: number;
+  sup: number;
+  anc: number;
+  /** The commission the products earn, added up. */
+  revenue: number;
+  /** Revenue projected to the month's end; null except on the current month. */
+  projected: number | null;
+};
 
 export type BoardRow = BoardTotals & {
   /** The user who submitted the sales. */
@@ -90,11 +107,21 @@ export type BoardRow = BoardTotals & {
   umbrellas: UmbrellaTier[];
 };
 
-export type Board = { rows: BoardRow[]; totals: BoardTotals };
+export type Board = {
+  /** The board's day, or its month's first day (YYYY-MM-DD). */
+  date: string;
+  rows: BoardRow[];
+  totals: BoardTotals;
+};
 
 export type Leaderboard = {
   /** Today, Chicago time. */
   date: string;
-  today: Board;
+  /** The picked day's board (today by default). */
+  day: Board;
+  /** The picked month's board (this month by default). */
   month: Board;
 };
+
+/** An earlier day (YYYY-MM-DD) or month (YYYY-MM) for the leaderboard. */
+export type LeaderboardPick = { day?: string; month?: string };

@@ -3,6 +3,7 @@
 .sold-party {
   border: 0;
   border-radius: 0.75rem;
+  margin: auto;
   padding: 0;
   width: min(22rem, 88vw);
   max-width: 88vw;

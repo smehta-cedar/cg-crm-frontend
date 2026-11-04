@@ -10,9 +10,10 @@ import {
   pdfRequired,
   productKey,
   saleFormData,
+  saleStateFromRow,
   type SaleState,
 } from "./logic";
-import type { ProductOption, SoldOptions } from "./types";
+import type { ProductOption, SoldOptions, SoldProductRow } from "./types";
 
 // The rules as GET /sold/options/ hands them out.
 const OPTIONS: SoldOptions = {
@@ -149,5 +150,52 @@ describe("saleFormData", () => {
     });
     expect((body.get("pdf_Heart") as File).name).toBe("heart.pdf");
     expect(body.get("pdf_SUP")).toBeNull();
+    // Only the list's edit asks for the sold date.
+    expect(data).not.toHaveProperty("sold_date");
+  });
+
+  it("sends a list row's edit back with its date and only its product", () => {
+    const row: SoldProductRow = {
+      id: "p1",
+      saleId: "s1",
+      soldDate: "2026-10-01",
+      clientFirstName: "Maria",
+      clientLastName: "Chen",
+      clientPhone: "(555) 010-4410",
+      state: "LA",
+      aor: "Yes",
+      leadSource: "Referral",
+      calendar: "AEP",
+      product: "SUP",
+      carrier: "Humana",
+      carrierId: "c1",
+      effectiveDate: "2026-12-01",
+      premium: "136.62",
+      commission: "327.89",
+      contractNumber: "",
+      mbi: "",
+      supPlan: "Plan G",
+      replacementSale: "No",
+      previousSoldProduct: "",
+      priorMapdPdpEnrollment: "No",
+      previousMapdPdpProduct: "",
+      umbrella: "Umbrella #1",
+      submittedBy: "Ana Admin",
+      submittedByEmail: "admin@example.com",
+      pdfName: null,
+      pdfUnableToGenerate: true,
+    };
+
+    const data = JSON.parse(String(saleFormData(saleStateFromRow(row), OPTIONS).get("data")));
+    expect(data).toMatchObject({ sold_date: "2026-10-01", client_last_name: "Chen", aor: true, umbrella: "Umbrella #1" });
+    expect(data.products).toEqual({
+      SUP: {
+        carrier: "c1",
+        premium: "136.62",
+        sup_plan: "Plan G",
+        effective_date: "2026-12-01",
+        pdf_unable_to_generate: true,
+      },
+    });
   });
 });

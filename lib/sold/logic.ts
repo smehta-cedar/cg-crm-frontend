@@ -1,5 +1,5 @@
 import type { FieldDef } from "./formConfig";
-import type { ProductOption, SoldOptions } from "./types";
+import type { ProductOption, SoldOptions, SoldProductRow } from "./types";
 
 /*
  * What the Sold form works out while it's being filled in: which questions
@@ -25,6 +25,37 @@ export function emptySaleState(): SaleState {
 /** A product answer's key in `values` and in the API's errors, e.g. "MAPD.mbi". */
 export function productKey(product: string, field: string) {
   return `${product}.${field}`;
+}
+
+/** The Sold list's edit popup, filled in from a row: the sale's answers and its one product's. */
+export function saleStateFromRow(row: SoldProductRow): SaleState {
+  const p = row.product;
+  return {
+    values: {
+      sold_date: row.soldDate,
+      client_first_name: row.clientFirstName,
+      client_last_name: row.clientLastName,
+      client_phone: row.clientPhone,
+      state: row.state,
+      aor: row.aor,
+      lead_source: row.leadSource,
+      calendar: row.calendar,
+      replacement_sale: row.replacementSale,
+      previous_sold_product: row.previousSoldProduct,
+      prior_mapd_pdp_enrollment: row.priorMapdPdpEnrollment,
+      previous_mapd_pdp_product: row.previousMapdPdpProduct,
+      umbrella: row.umbrella,
+      [productKey(p, "carrier")]: row.carrierId,
+      [productKey(p, "premium")]: row.premium,
+      [productKey(p, "mbi")]: row.mbi,
+      [productKey(p, "contract_number")]: row.contractNumber,
+      [productKey(p, "sup_plan")]: row.supPlan,
+      [productKey(p, "effective_date")]: row.effectiveDate,
+    },
+    products: [p],
+    skipPdf: { [p]: row.pdfUnableToGenerate },
+    files: {},
+  };
 }
 
 export function fieldVisible(field: FieldDef, state: SaleState, options: SoldOptions): boolean {
@@ -117,7 +148,8 @@ function yesNo(value: string | undefined): boolean | null {
 /**
  * The form as POST /sold/create/ takes it: the answers as JSON in `data`
  * and each ticked product's PDF as pdf_<product>. Hidden questions go too;
- * the API drops them.
+ * the API drops them. The list's edit (PATCH /sold/products/{id}/) sends
+ * the same, plus the sold date only it asks for.
  */
 export function saleFormData(state: SaleState, options: SoldOptions): FormData {
   const { values } = state;
@@ -133,6 +165,8 @@ export function saleFormData(state: SaleState, options: SoldOptions): FormData {
   }
 
   const data = {
+    // Unset on the Sold form, so JSON leaves it out.
+    sold_date: values.sold_date,
     client_first_name: values.client_first_name ?? "",
     client_last_name: values.client_last_name ?? "",
     client_phone: values.client_phone ?? "",

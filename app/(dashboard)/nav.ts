@@ -79,7 +79,8 @@ const NAV_ITEMS: NavItem[] = [
     listModule: "sold.list",
     searchable: true,
     children: [
-      { href: "/sold", label: "Sold-form", icon: "sold", module: "sold.form" },
+      // /sold is the parent of its siblings, so it must not light up on them.
+      { href: "/sold", label: "Sold-form", icon: "sold", module: "sold.form", activeExcept: ["/sold/list", "/sold/leaderboard"] },
       { href: "/sold/leaderboard", label: "Leaderboard", icon: "leaderboard", module: "sold.leaderboard" },
     ],
   },

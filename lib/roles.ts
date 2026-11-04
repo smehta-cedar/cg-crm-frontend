@@ -42,7 +42,7 @@ export type RoleRecord = {
   permissions: RolePermissions;
   /** Live users assigned this role. A role with any cannot be deleted. */
   userCount: number;
-  /** Admin, Operations, Agent or SDR: cannot be deleted, renamed or made inactive. */
+  /** Admin, Operations, Agent, SDR or Sold Emails: cannot be deleted, renamed or made inactive. */
   builtIn: boolean;
 };
 
