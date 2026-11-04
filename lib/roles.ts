@@ -1,16 +1,20 @@
 import "server-only";
 
 /*
- * Data boundary for roles: what a signed-in user may do per module, read
- * from the Django API (`/api/v1/roles/`, backend/apps/accounts) as the
+ * Data boundary for roles: what a signed-in user may do per sidebar link,
+ * read from the Django API (`/api/v1/roles/`, backend/apps/accounts) as the
  * signed-in user. Adds, edits and deletes go through the server actions in
  * app/(dashboard)/roles/actions.ts; the API lets only a superuser make them,
  * and the Roles page is shown only to a superuser.
  *
- * A role holds one permission row per module (the screens the API knows,
- * listed by `/roles/modules/`), each with view / create / update / delete
- * flags. Create, update or delete also needs view; a module with no flags
- * is no access. Users are given a role on the Users page (lib/users.ts).
+ * A role holds one permission row per sidebar link (its code, from
+ * app/(dashboard)/nav.ts permissionLinks), each with view / create / update /
+ * delete flags. Create, update or delete also needs view; a link with no
+ * flags is no access. `all` (View all) lets the flags reach everyone's records
+ * on the link; without it they reach only the user's own (under their agent
+ * profile, or made by them). Agents and staff follow the same rules; a
+ * superuser has everything. Users are given roles on the Users page
+ * (lib/users.ts).
  */
 
 import { apiGet } from "@/lib/api-server";
@@ -19,18 +23,17 @@ export type RoleStatus = "active" | "inactive";
 
 export type PermissionAction = "view" | "create" | "update" | "delete";
 
-/** One module's flags. */
-export type PermissionFlags = Record<PermissionAction, boolean>;
+/** One link's flags; `all` is View all: everyone's records, not just the user's own. */
+export type PermissionFlags = Record<PermissionAction, boolean> & { all: boolean };
 
-/** Module code -> flags. A module missing here has no access. */
+/** Link code -> flags. A link missing here has no access. */
 export type RolePermissions = Record<string, PermissionFlags>;
 
 /**
- * A screen a role can be granted, as the API lists them: `code` is what a
- * permission names. `agentActions` are the only ones the Agent role can hold:
- * an agent's sign-in can't use any other, so the API refuses them.
+ * A sidebar link a role can be granted, a row on the Roles page. `ownable`
+ * links hold records that belong to someone, so the row offers View all.
  */
-export type ModuleOption = { code: string; label: string; agentActions: PermissionAction[] };
+export type ModuleOption = { code: string; label: string; ownable: boolean };
 
 export type RoleRecord = {
   /** The API's UUID. */
@@ -64,6 +67,7 @@ export type ApiRolePermission = {
   can_create: boolean;
   can_update: boolean;
   can_delete: boolean;
+  view_all: boolean;
 };
 
 /** A role as the API serialises it (RoleSerializer). */
@@ -88,6 +92,7 @@ export function toRoleRecord(role: ApiRole): RoleRecord {
       create: permission.can_create,
       update: permission.can_update,
       delete: permission.can_delete,
+      all: permission.view_all,
     };
     if (flags.view || flags.create || flags.update || flags.delete) permissions[permission.module] = flags;
   }
@@ -108,8 +113,3 @@ export async function getRoles(): Promise<RoleRecord[]> {
   return roles.map(toRoleRecord);
 }
 
-/** The modules a role can be granted, in menu order. Superusers only. */
-export async function getRoleModules(): Promise<ModuleOption[]> {
-  const modules = await apiGet<{ code: string; label: string; agent_actions: PermissionAction[] }[]>("/roles/modules/");
-  return modules.map(({ code, label, agent_actions }) => ({ code, label, agentActions: agent_actions }));
-}

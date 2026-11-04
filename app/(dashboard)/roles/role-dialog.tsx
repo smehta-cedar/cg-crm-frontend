@@ -18,13 +18,14 @@ import type {
 /*
  * The one Add / Edit role dialog: name, status, description and a grid of
  * sidebar links by action. Each row's switch turns every action on or off;
- * it shows on when all four are. Checking create, update or delete also
- * checks view; unchecking view clears the row. A header checkbox sets a
- * whole column. Every role, Agent included, lists the sidebar links.
+ * it shows on when all four are. Checking create, update, delete or View all
+ * also checks view; unchecking view clears the row. A header checkbox sets a
+ * whole column. Every role, Agent included, lists the sidebar links and
+ * follows the same rules.
  *
- * The Agent role holds only the boxes an agent's sign-in can use (each
- * module's `agentActions`; the API refuses the rest). The others are greyed
- * out, and the row switches and column boxes leave them off.
+ * View all shows only on links whose records belong to someone (`ownable`).
+ * Left off, the boxes reach only the user's own records there: under their
+ * agent profile, or ones they made.
  *
  * The view passes `onSave` and `onDelete`, which call the server actions
  * (./actions.ts) and update its own state. Delete asks once more inside the
@@ -42,30 +43,31 @@ export type { RoleError, RoleValues } from "@/lib/roles";
 /** Column order in the grid; also the order the API stores them in. */
 export const PERMISSION_ACTIONS: PermissionAction[] = ["view", "create", "update", "delete"];
 
-/** What each action is called in the grid. */
-const ACTION_LABELS: Record<PermissionAction, string> = {
+/** A box in a row: an action, or View all. */
+type Flag = keyof PermissionFlags;
+
+/** Every column of boxes, View all last. */
+const FLAGS: Flag[] = [...PERMISSION_ACTIONS, "all"];
+
+/** What each box is called in the grid. */
+const FLAG_LABELS: Record<Flag, string> = {
   view: "Read",
   create: "Add",
   update: "Edit",
   delete: "Delete",
+  all: "View all",
 };
-
-const FULL_ACCESS: PermissionFlags = { view: true, create: true, update: true, delete: true };
 
 /** A built-in role's name and status, shown but not editable. */
 const LOCKED_CLASS = "cursor-not-allowed bg-surface-muted text-fg-muted";
 
-const NO_ACCESS: PermissionFlags = { view: false, create: false, update: false, delete: false };
+const NO_ACCESS: PermissionFlags = { view: false, create: false, update: false, delete: false, all: false };
 
 /** The built-in role every agent sign-in uses. */
 export const isAgentRole = (role: RoleRecord) => role.builtIn && role.name.toLowerCase() === "agent";
 
-/** `flags` with every action the Agent role can't hold on `module` turned off. */
-function agentLimit(module: ModuleOption, flags: PermissionFlags): PermissionFlags {
-  const limited = { ...flags };
-  for (const action of PERMISSION_ACTIONS) limited[action] = flags[action] && module.agentActions.includes(action);
-  return limited;
-}
+/** Whether the row has this box: View all only where records belong to someone. */
+const hasFlag = (module: ModuleOption, flag: Flag) => flag !== "all" || module.ownable;
 
 type RoleDialogProps = {
   /** Null keeps the dialog closed. */
@@ -103,10 +105,7 @@ type RoleFormProps = Pick<RoleDialogProps, "onSave" | "onDelete" | "modules"> & 
 /** Every module with the flags the role holds, or none. */
 function initialPermissions(modules: ModuleOption[], role?: RoleRecord): RolePermissions {
   const permissions: RolePermissions = {};
-  for (const module of modules) {
-    const flags = { ...(role?.permissions[module.code] ?? NO_ACCESS) };
-    permissions[module.code] = role && isAgentRole(role) ? agentLimit(module, flags) : flags;
-  }
+  for (const module of modules) permissions[module.code] = { ...NO_ACCESS, ...role?.permissions[module.code] };
   return permissions;
 }
 
@@ -114,11 +113,6 @@ function initialPermissions(modules: ModuleOption[], role?: RoleRecord): RolePer
 function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProps) {
   const editing = editor.mode === "edit" ? editor.role : undefined;
   const builtIn = editing?.builtIn ?? false;
-  const agentRole = editing ? isAgentRole(editing) : false;
-  /** Whether the role can hold `action` on `module`; only the Agent role is limited. */
-  const allows = (module: ModuleOption, action: PermissionAction) =>
-    !agentRole || module.agentActions.includes(action);
-  const limit = (module: ModuleOption, flags: PermissionFlags) => (agentRole ? agentLimit(module, flags) : flags);
   const [permissions, setPermissions] = useState(() => initialPermissions(modules, editing));
   const [error, setError] = useState<RoleError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -132,54 +126,46 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
   const permissionsError = messageFor("permissions");
   const formError = messageFor("form") ?? messageFor("status");
 
-  /** Sets one flag, keeping the rule that create, update and delete need view. */
-  const setFlag = (module: ModuleOption, action: PermissionAction, checked: boolean) => {
-    clear();
-    setPermissions((current) => {
-      const flags = { ...current[module.code] };
-      if (action === "view" && !checked) {
-        return { ...current, [module.code]: { ...NO_ACCESS } };
-      }
-      flags[action] = checked;
-      if (checked) flags.view = true;
-      return { ...current, [module.code]: limit(module, flags) };
-    });
+  /** `flags` with one box set, keeping the rule that every other box needs view. */
+  const withFlag = (flags: PermissionFlags, flag: Flag, checked: boolean): PermissionFlags => {
+    if (flag === "view" && !checked) return { ...NO_ACCESS };
+    return { ...flags, [flag]: checked, ...(checked ? { view: true } : {}) };
   };
 
-  /** The row's switch: every action on, or none. */
+  const setFlag = (module: ModuleOption, flag: Flag, checked: boolean) => {
+    clear();
+    setPermissions((current) => ({ ...current, [module.code]: withFlag(current[module.code], flag, checked) }));
+  };
+
+  /** The row's switch: every action on (View all left as it was), or nothing. */
   const setRow = (module: ModuleOption, on: boolean) => {
     clear();
-    setPermissions((current) => ({ ...current, [module.code]: limit(module, on ? FULL_ACCESS : NO_ACCESS) }));
+    setPermissions((current) => ({
+      ...current,
+      [module.code]: on
+        ? { view: true, create: true, update: true, delete: true, all: current[module.code].all }
+        : { ...NO_ACCESS },
+    }));
   };
 
-  /** On when every action the role can hold here is checked. */
-  const rowOn = (module: ModuleOption) => {
-    const actions = PERMISSION_ACTIONS.filter((action) => allows(module, action));
-    return actions.length > 0 && actions.every((action) => permissions[module.code]?.[action]);
-  };
+  /** On when all four actions are checked. */
+  const rowOn = (module: ModuleOption) => PERMISSION_ACTIONS.every((action) => permissions[module.code]?.[action]);
 
-  /** Sets one action for every row, with the same view rule. */
-  const setColumn = (action: PermissionAction, checked: boolean) => {
+  /** Sets one box on every row that has it, with the same view rule. */
+  const setColumn = (flag: Flag, checked: boolean) => {
     clear();
     setPermissions((current) => {
       const next: RolePermissions = { ...current };
       for (const module of modules) {
-        const flags = { ...current[module.code] };
-        if (action === "view" && !checked) {
-          next[module.code] = { ...NO_ACCESS };
-          continue;
-        }
-        flags[action] = checked;
-        if (checked) flags.view = true;
-        next[module.code] = limit(module, flags);
+        if (hasFlag(module, flag)) next[module.code] = withFlag(current[module.code], flag, checked);
       }
       return next;
     });
   };
 
-  const columnChecked = (action: PermissionAction) => {
-    const open = modules.filter((module) => allows(module, action));
-    return open.length > 0 && open.every((module) => permissions[module.code]?.[action]);
+  const columnChecked = (flag: Flag) => {
+    const open = modules.filter((module) => hasFlag(module, flag));
+    return open.length > 0 && open.every((module) => permissions[module.code]?.[flag]);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -289,16 +275,16 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
                 <th scope="col" className="px-3 py-2 text-left font-medium">
                   Module
                 </th>
-                {PERMISSION_ACTIONS.map((action) => (
-                  <th key={action} scope="col" className="w-24 px-2 py-2 text-center font-medium">
-                    <label className="inline-flex cursor-pointer items-center gap-1.5">
+                {FLAGS.map((flag) => (
+                  <th key={flag} scope="col" className="w-24 px-2 py-2 text-center font-medium">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        checked={columnChecked(action)}
-                        onChange={(event) => setColumn(action, event.currentTarget.checked)}
+                        checked={columnChecked(flag)}
+                        onChange={(event) => setColumn(flag, event.currentTarget.checked)}
                         className="size-4 rounded border-line-strong accent-brand-strong"
                       />
-                      {ACTION_LABELS[action]}
+                      {FLAG_LABELS[flag]}
                       <span className="sr-only"> for every module</span>
                     </label>
                   </th>
@@ -311,7 +297,6 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
                   <td className="px-3 py-2">
                     <Switch
                       checked={rowOn(module)}
-                      disabled={!allows(module, "view")}
                       label={`All permissions for ${module.label}`}
                       onChange={(on) => setRow(module, on)}
                     />
@@ -319,16 +304,17 @@ function RoleForm({ id, editor, modules, onSave, onDelete, close }: RoleFormProp
                   <th scope="row" className="px-3 py-2 text-left font-normal text-fg">
                     {module.label}
                   </th>
-                  {PERMISSION_ACTIONS.map((action) => (
-                    <td key={action} className="px-2 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        aria-label={`${ACTION_LABELS[action]} ${module.label}`}
-                        checked={permissions[module.code]?.[action] ?? false}
-                        disabled={!allows(module, action)}
-                        onChange={(event) => setFlag(module, action, event.currentTarget.checked)}
-                        className="size-4 rounded border-line-strong accent-brand-strong disabled:cursor-not-allowed disabled:opacity-40"
-                      />
+                  {FLAGS.map((flag) => (
+                    <td key={flag} className="px-2 py-2 text-center">
+                      {hasFlag(module, flag) ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`${FLAG_LABELS[flag]} ${module.label}`}
+                          checked={permissions[module.code]?.[flag] ?? false}
+                          onChange={(event) => setFlag(module, flag, event.currentTarget.checked)}
+                          className="size-4 rounded border-line-strong accent-brand-strong"
+                        />
+                      ) : null}
                     </td>
                   ))}
                 </tr>

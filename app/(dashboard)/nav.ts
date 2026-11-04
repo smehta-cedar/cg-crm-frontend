@@ -1,13 +1,24 @@
 import type { NavItem } from "@/components/sidebar";
 import { canView, type SessionUser } from "@/lib/auth-user";
+import type { ModuleOption } from "@/lib/roles";
 import { STATUS_MODULES } from "@/lib/status-sections";
 
 /*
- * The dashboard rail, and which links a user's role shows. Every link names
- * its permission code (backend/apps/accounts/models/roles.py MODULES), one
- * per link, whose view flag shows it; a section's own list page uses
- * `listModule`. The pages check the same flag (lib/access.ts), so a typed URL
- * gets "No access" instead of the API's 403.
+ * The dashboard rail, and which links a user's roles show. This list is also
+ * what a role can be granted: every link names its permission code, and the
+ * Roles page has one row per code (permissionLinks), so adding or removing a
+ * link here is all it takes. The API keeps no list of its own.
+ *
+ * A code is "section" for a link on its own ("tasks") or "section.link" for
+ * one under a section ("sold.form"); a section's own list page uses
+ * `listModule`. The link's view flag shows it, and its page checks the same
+ * flag (lib/access.ts), so a typed URL gets "No access" instead of the API's
+ * 403. The link's API checks the same code (module_permission in the
+ * backend), so renaming a code means renaming it there too.
+ *
+ * `ownable` marks a link whose records belong to someone: its Roles row gets
+ * View all, and without it a role reaches only its own records there (the
+ * API reads through own_only). Leave it off a shared page.
  */
 
 const NAV_ITEMS: NavItem[] = [
@@ -19,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
     listIcon: "list",
     icon: "agents",
     listModule: "agents.list",
+    ownable: true,
     searchable: true,
     children: [
       // Opens the first agent; stays highlighted on every /agents/<id>, but
@@ -28,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
         label: "Agent profile",
         icon: "profile",
         module: "agents.profile",
+        ownable: true,
         activePrefix: "/agents/",
         activeExcept: ["/agents/new", "/edit"],
       },
@@ -54,7 +67,7 @@ const NAV_ITEMS: NavItem[] = [
       },
     ],
   },
-  { href: "/passwords", label: "Passwords", icon: "passwords", module: "passwords", searchable: true },
+  { href: "/passwords", label: "Passwords", icon: "passwords", module: "passwords", ownable: true, searchable: true },
   {
     href: "/contracts",
     label: "Contracts",
@@ -62,9 +75,12 @@ const NAV_ITEMS: NavItem[] = [
     listIcon: "map",
     icon: "contracts",
     listModule: "contracts.by_state",
+    ownable: true,
     searchable: true,
     // Contracts itself is the by-state view; by-carriers is the one sub-link.
-    children: [{ href: "/contracts/by-carriers", label: "By carriers", icon: "carriers", module: "contracts.by_carriers" }],
+    children: [
+      { href: "/contracts/by-carriers", label: "By carriers", icon: "carriers", module: "contracts.by_carriers", ownable: true },
+    ],
   },
   // Sales: the list (one row per product), the form agents submit, and the
   // leaderboard. List is the section href so navbar search scopes the product table.
@@ -75,6 +91,7 @@ const NAV_ITEMS: NavItem[] = [
     listIcon: "list",
     icon: "sold",
     listModule: "sold.list",
+    ownable: true,
     searchable: true,
     children: [
       // /sold is the parent of its siblings, so it must not light up on them.
@@ -91,11 +108,11 @@ const NAV_ITEMS: NavItem[] = [
     listIcon: "tracker",
     icon: "tracker",
     listModule: "tracker.clicks",
-    children: [{ href: "/tracker/history", label: "History", icon: "list", module: "tracker.history" }],
+    children: [{ href: "/tracker/history", label: "History", icon: "list", module: "tracker.history", ownable: true }],
   },
   // Requests and the calendar they land on.
-  { href: "/hr", label: "Calendar", icon: "hr", module: "requests" },
-  { href: "/tasks", label: "Tasks", icon: "tasks", module: "tasks" },
+  { href: "/hr", label: "Calendar", icon: "hr", module: "requests", ownable: true },
+  { href: "/tasks", label: "Tasks", icon: "tasks", module: "tasks", ownable: true },
   // What the shop sells, and the shop itself; orders land on HR.
   {
     href: "/storefront",
@@ -156,4 +173,25 @@ export function footerItemsFor(user: SessionUser): NavItem[] {
 /** Where to send a user whose role can't see the Overview: the first link they can. */
 export function homeFor(user: SessionUser): string | null {
   return navItemsFor(user)[0]?.href ?? null;
+}
+
+/**
+ * Every link that names a code of its own, in rail order: the Roles page's
+ * rows. Pending and Archive borrow other links' codes and Roles has none, so
+ * they are not rows.
+ */
+export function permissionLinks(): ModuleOption[] {
+  const links = new Map<string, ModuleOption>();
+  const add = (code: NavItem["module"], label: string, ownable = false) => {
+    if (typeof code === "string" && !links.has(code)) links.set(code, { code, label, ownable });
+  };
+  for (const item of [...NAV_ITEMS, ...FOOTER_ITEMS]) {
+    if (!item.children) {
+      add(item.module, item.label, item.ownable);
+      continue;
+    }
+    add(item.listModule, `${item.label} / ${item.listLabel ?? item.label}`, item.ownable);
+    for (const child of item.children) add(child.module, `${item.label} / ${child.label}`, child.ownable);
+  }
+  return [...links.values()];
 }

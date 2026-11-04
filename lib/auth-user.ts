@@ -41,8 +41,9 @@ export type ApiUser = {
   created_at: string;
   updated_at: string;
   /**
-   * Module code -> action flags, for modules the role grants anything on.
-   * Only GET /auth/me/ sends it (MeSerializer); user lists leave it out.
+   * Sidebar link code -> action flags, for links the roles grant anything on;
+   * {} for a superuser, who has every link. Only GET /auth/me/ sends it
+   * (MeSerializer); user lists leave it out.
    */
   permissions?: RolePermissions;
   /** Only GET /auth/me/ sends it; nobody else sees a user's settings. */
@@ -60,7 +61,7 @@ export type SessionUser = {
   isSuperuser: boolean;
   /** The agent this account signs in as. Null for staff. */
   agentId: string | null;
-  /** What the role lets them do, per module. A superuser has every module. */
+  /** What the roles grant, per sidebar link code. Read it through can(): a superuser's is empty. */
   permissions: RolePermissions;
   preferences: Preferences;
 };
@@ -79,17 +80,24 @@ export function toSessionUser(user: ApiUser): SessionUser {
   };
 }
 
-/** Whether the role lets this user see `module` (an API module code, e.g. "agents"). */
+/** Whether the roles let this user see `module`, a sidebar link's code (nav.ts). */
 export function canView(user: SessionUser, module: string): boolean {
-  return Boolean(user.permissions[module]?.view);
+  return can(user, module, "view");
 }
 
-/** Whether the role lets this user create in `module`. */
+/** Whether the roles let this user create in `module`. */
 export function canCreate(user: SessionUser, module: string): boolean {
-  return Boolean(user.permissions[module]?.create);
+  return can(user, module, "create");
 }
 
-/** Whether the roles let this user do `action` in `module`. */
+/**
+ * Whether the roles let this user do `action` on `module`. A superuser may do
+ * anything. A bare section ("sold") is allowed when any of its links is
+ * ("sold.form", "sold.list"), as the API's User.has_permission answers it.
+ */
 export function can(user: SessionUser, module: string, action: PermissionAction): boolean {
-  return Boolean(user.permissions[module]?.[action]);
+  if (user.isSuperuser) return true;
+  return Object.entries(user.permissions).some(
+    ([code, flags]) => (code === module || code.startsWith(`${module}.`)) && flags[action],
+  );
 }

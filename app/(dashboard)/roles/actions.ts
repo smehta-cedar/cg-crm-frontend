@@ -61,6 +61,7 @@ export async function saveRole(values: RoleValues, editingId?: string): Promise<
       can_create: flags.create,
       can_update: flags.update,
       can_delete: flags.delete,
+      view_all: flags.all,
     })),
   };
   const result = editingId

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getRoleModules, getRoles } from "@/lib/roles";
+import { getRoles } from "@/lib/roles";
 import { getSessionUser } from "@/lib/session";
 import { getUsers } from "@/lib/users";
+import { permissionLinks } from "../nav";
 import { RolesView } from "./roles-view";
 
 export const metadata: Metadata = {
@@ -15,7 +16,8 @@ export default async function RolesPage() {
   const user = await getSessionUser();
   if (!user?.isSuperuser) redirect("/overview");
 
-  const [roles, modules, users] = await Promise.all([getRoles(), getRoleModules(), getUsers()]);
+  const [roles, users] = await Promise.all([getRoles(), getUsers()]);
 
-  return <RolesView initialRoles={roles} modules={modules} users={users} />;
+  // One row per sidebar link, so a new link is grantable as soon as it's in nav.ts.
+  return <RolesView initialRoles={roles} modules={permissionLinks()} users={users} />;
 }

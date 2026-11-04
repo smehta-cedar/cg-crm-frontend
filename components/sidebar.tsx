@@ -60,6 +60,12 @@ export type NavItem = {
   module?: string | string[] | null;
   /** With `listLabel`, the permission code whose view flag shows the list sub-link. */
   listModule?: string;
+  /**
+   * The link's records belong to someone (an agent, or the user who made
+   * them), so the Roles page offers View all on its row; on a section it is
+   * the list sub-link's. Left out: a shared page everyone sees whole.
+   */
+  ownable?: boolean;
 };
 
 type SidebarProps = {
