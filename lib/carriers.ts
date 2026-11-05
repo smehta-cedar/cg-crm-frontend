@@ -49,6 +49,11 @@ export type CarrierRecord = {
   name: string;
   /** Other names seen on statements or in conversation. Empty when none. */
   aliases: string[];
+  /**
+   * The carrier's companies' NAIC codes, five digits each ("06084"), in the
+   * order entered. Each belongs to one carrier. Empty when none yet.
+   */
+  naicCodes: string[];
   /** At least one, in LINES_OF_BUSINESS order. */
   linesOfBusiness: LineOfBusiness[];
   /**
@@ -84,6 +89,7 @@ export type CarrierRecord = {
 export type CarrierField =
   | "name"
   | "aliases"
+  | "naicCodes"
   | "linesOfBusiness"
   | "certificationLines"
   | "links"
@@ -103,7 +109,7 @@ export type CarrierLicenseValues = Omit<StateLicense, "id">;
 /** What the add / edit form submits. The available states come from the rows. */
 export type CarrierValues = Pick<
   CarrierRecord,
-  "name" | "aliases" | "linesOfBusiness" | "certificationLines" | "links" | "status"
+  "name" | "aliases" | "naicCodes" | "linesOfBusiness" | "certificationLines" | "links" | "status"
 > & {
   licenses: CarrierLicenseValues[];
 };
@@ -134,6 +140,7 @@ export type ApiCarrier = {
   id: string;
   name: string;
   aliases: string[];
+  naic_codes: string[];
   lines_of_business: string[];
   certification_lines: string[];
   links: CarrierLink[];
@@ -174,6 +181,7 @@ type ApiCarrierNote = {
 const NOTE_FIELDS: Record<string, CarrierField> = {
   name: "name",
   aliases: "aliases",
+  naic_codes: "naicCodes",
   lines_of_business: "linesOfBusiness",
   certification_lines: "certificationLines",
   // Notes from before links had names recorded the single "link".
@@ -199,6 +207,7 @@ export function toCarrierRecord(carrier: ApiCarrier): CarrierRecord {
     id: carrier.id,
     name: carrier.name,
     aliases: carrier.aliases,
+    naicCodes: carrier.naic_codes ?? [],
     linesOfBusiness: LINES_OF_BUSINESS.filter((line) => carrier.lines_of_business.includes(line)),
     certificationLines: LINES_OF_BUSINESS.filter(
       (line) => carrier.lines_of_business.includes(line) && (carrier.certification_lines ?? []).includes(line),

@@ -37,6 +37,7 @@ export type SaveCarrierResult =
 const ERROR_FIELDS: Record<string, CarrierError["field"]> = {
   name: "name",
   aliases: "aliases",
+  naic_codes: "naicCodes",
   lines_of_business: "linesOfBusiness",
   certification_lines: "certificationLines",
   links: "links",
@@ -50,6 +51,7 @@ export async function saveCarrier(values: CarrierValues, editingId?: string): Pr
   const body = {
     name: values.name,
     aliases: values.aliases,
+    naic_codes: values.naicCodes,
     lines_of_business: values.linesOfBusiness,
     certification_lines: values.certificationLines,
     links: values.links,

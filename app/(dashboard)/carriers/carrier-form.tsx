@@ -59,6 +59,7 @@ export type { CarrierError, CarrierValues } from "@/lib/carriers";
 export const CARRIER_FIELD_LABELS: Record<CarrierField, string> = {
   name: "Name",
   aliases: "Aliases",
+  naicCodes: "NAIC codes",
   linesOfBusiness: "Lines of business",
   certificationLines: "Certifications",
   links: "Links",
@@ -81,6 +82,10 @@ export function readCarrierForm(data: FormData): CarrierValues {
     aliases: text("aliases")
       .split(",")
       .map((alias) => alias.trim())
+      .filter(Boolean),
+    naicCodes: text("naicCodes")
+      .split(",")
+      .map((code) => code.trim())
       .filter(Boolean),
     linesOfBusiness,
     certificationLines: LINES_OF_BUSINESS.filter(
@@ -114,6 +119,7 @@ export function CarrierFormPage({ carrier: editing, returnTo }: CarrierFormPageP
 
   const nameError = messageFor("name");
   const aliasesError = messageFor("aliases");
+  const naicCodesError = messageFor("naicCodes");
   const linksError = messageFor("links");
   const linesError = messageFor("linesOfBusiness");
   const certificationsError = messageFor("certificationLines");
@@ -178,7 +184,7 @@ export function CarrierFormPage({ carrier: editing, returnTo }: CarrierFormPageP
 
         {/* One card per row; capped so the inputs stay a sensible width. */}
         <div className="mx-auto grid max-w-(--breakpoint-2xl) gap-5">
-          <FormSection title="Identity" action={status} layout="page" columns="sm:grid-cols-2">
+          <FormSection title="Identity" action={status} layout="page" columns="sm:grid-cols-3">
             <Field
               label="Name"
               required
@@ -220,7 +226,27 @@ export function CarrierFormPage({ carrier: editing, returnTo }: CarrierFormPageP
                 className={INPUT_CLASS}
               />
             </Field>
-            <div className="min-w-0 sm:col-span-2">
+            <Field
+              label="NAIC codes"
+              htmlFor={`${id}-naic-codes`}
+              hint={naicCodesError ?? "Separate by comma."}
+              hintId={`${id}-naic-codes-hint`}
+              error={naicCodesError !== null}
+            >
+              <input
+                id={`${id}-naic-codes`}
+                name="naicCodes"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                aria-invalid={naicCodesError ? true : undefined}
+                aria-describedby={`${id}-naic-codes-hint`}
+                defaultValue={editing?.naicCodes.join(", ")}
+                onChange={() => clear("naicCodes")}
+                className={INPUT_CLASS}
+              />
+            </Field>
+            <div className="min-w-0 sm:col-span-3">
               <fieldset>
                 <legend className="block text-sm font-medium text-fg">Lines of business</legend>
                 <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2">
